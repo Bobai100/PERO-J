@@ -10,11 +10,11 @@
 
 ## The Problem
 
-Stellar block explorers have excellent support for classic assets but poor support for Soroban smart contracts. When a user calls `swap` on a DEX, explorers show raw XDR bytes — unreadable to anyone. This "black box" experience dampens DeFi, NFT, and web3 growth on Stellar.
+PERO-J have excellent support for classic assets but poor support for Soroban smart contracts. When a user calls `swap` on a DEX, explorers show raw XDR bytes — unreadable to anyone. This "black box" experience dampens DeFi, NFT, and web3 growth on Stellar.
 
 ## The Solution
 
-Soroban Smart Block Explorer decodes contract calls on the fly using an ABI-like metadata registry, turning opaque XDR into plain English.
+PERO-J decodes contract calls on the fly using an ABI-like metadata registry, turning opaque XDR into plain English.
 
 | Before | After |
 |--------|-------|
@@ -26,13 +26,13 @@ Soroban Smart Block Explorer decodes contract calls on the fly using an ABI-like
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Soroban RPC / Horizon                                  │
+│  PERO-J RPC / Horizon                                  │
 │  (getEvents, getTransaction)                            │
 └────────────────────┬────────────────────────────────────┘
                      │ poll every 5 s
 ┌────────────────────▼────────────────────────────────────┐
 │  Indexer  (Node.js)                                     │
-│  • Fetches raw events via SorobanRpc.getEvents()        │
+│  • Fetches raw events via PERO-JRpc.getEvents()        │
 │  • Decodes XDR → human text using ABI registry          │
 │  • Stores decoded events in PostgreSQL                  │
 │  • Exposes REST API on :3001                            │
@@ -47,7 +47,7 @@ Soroban Smart Block Explorer decodes contract calls on the fly using an ABI-like
 └─────────────────────────────────────────────────────────┘
                      ▲
 ┌────────────────────┴────────────────────────────────────┐
-│  Soroban Contract  (Rust)                               │
+│  PERO-J Contract  (Rust)                               │
 │  • ContractRegistry — stores ABI-like metadata          │
 │  • EventDecoder — persists decoded events on-chain      │
 └─────────────────────────────────────────────────────────┘
@@ -65,8 +65,8 @@ Soroban Smart Block Explorer decodes contract calls on the fly using an ABI-like
 
 ### 1. Clone & configure
 ```bash
-git clone https://github.com/your-org/Soroban-Smart-Block
-cd Soroban-Smart-Block
+git clone https://github.com/PERO-J
+cd PERO-J
 cp .env.example .env
 # Edit .env with your RPC URL and DATABASE_URL
 ```
@@ -153,7 +153,7 @@ The decoder recognises SEP-41 token events (`transfer`, `mint`, `burn`) and form
 ┌──────────────────────────────────────────────────────────────┐
 │  Stellar Network                                             │
 │  ┌─────────────────────┐   ┌──────────────────────────────┐ │
-│  │  Soroban RPC        │   │  Horizon API                 │ │
+│  │  PERO-J RPC        │   │  Horizon API                 │ │
 │  │  getEvents()        │   │  Classic asset metadata      │ │
 │  │  getTransaction()   │   │  (asset codes, issuers)      │ │
 │  └──────────┬──────────┘   └──────────────┬───────────────┘ │
@@ -187,14 +187,14 @@ The decoder recognises SEP-41 token events (`transfer`, `mint`, `burn`) and form
 └─────────────────────────────────────────────────────────────┘
                               ▲
 ┌─────────────────────────────┴───────────────────────────────┐
-│  Soroban Contract (Rust)  — on-chain source of truth        │
+│  PERO-J Contract (Rust)  — on-chain source of truth        │
 │  ContractRegistry  register_contract / get_contract         │
 │  EventDecoder      submit_event / get_events / event_count  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Data flow for a decoded event:**
-1. Soroban contract emits an event (e.g., `swap` on StellarSwap)
+1. PERO-J contract emits an event (e.g., `swap` on StellarSwap)
 2. Indexer fetches it via `SorobanRpc.getEvents()`
 3. `decoder.js` calls `scValToNative()` on topics/data, looks up registered ABI
 4. Produces human-readable string → stored in PostgreSQL + submitted to on-chain contract
