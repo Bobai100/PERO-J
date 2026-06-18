@@ -1,6 +1,6 @@
-# ⬡ Soroban Smart Block Explorer
+# ⬡ PERO-J
 
-> **Human-readable Soroban contract events on Stellar.**
+> **Human-readable PERO-J contract events on Stellar.**
 > Instead of raw XDR bytes, users see: *"Address GABC… swapped 100 USDC → 98.7 XLM on StellarSwap at ledger #4521983."*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
