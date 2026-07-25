@@ -1,0 +1,61 @@
+{
+  "id": "CBDIZJSO3SZGBYABF4RBE75QNRYNXP5KOGP7GF23JDZUOBAVNISTL52",
+  "name": "Blend",
+  "description": "Lending/borrowing protocol on Stellar testnet (Tranche 2 integration fixture)",
+  "functions": [
+    {
+      "name": "supply",
+      "description": "Supply an asset to the Blend pool and receive b-tokens representing the deposit",
+      "params": [
+        { "name": "caller",  "kind": "address" },
+        { "name": "asset",   "kind": "address" },
+        { "name": "amount",  "kind": "i128"    }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "description": "Withdraw a previously supplied asset by burning the corresponding b-tokens",
+      "params": [
+        { "name": "caller",     "kind": "address" },
+        { "name": "asset",      "kind": "address" },
+        { "name": "b_tokens",   "kind": "i128"    }
+      ]
+    },
+    {
+      "name": "borrow",
+      "description": "Borrow an asset against deposited collateral",
+      "params": [
+        { "name": "caller",  "kind": "address" },
+        { "name": "asset",   "kind": "address" },
+        { "name": "amount",  "kind": "i128"    }
+      ]
+    },
+    {
+      "name": "repay",
+      "description": "Repay a previously borrowed amount and reduce the debt position",
+      "params": [
+        { "name": "caller",  "kind": "address" },
+        { "name": "asset",   "kind": "address" },
+        { "name": "amount",  "kind": "i128"    }
+      ]
+    },
+    {
+      "name": "liquidate",
+      "description": "Liquidate an undercollateralised borrower position and claim the collateral discount",
+      "params": [
+        { "name": "liquidator", "kind": "address" },
+        { "name": "borrower",   "kind": "address" },
+        { "name": "asset",      "kind": "address" },
+        { "name": "amount",     "kind": "i128"    }
+      ]
+    },
+    {
+      "name": "get_position",
+      "description": "Return the current supply and borrow balance for a user",
+      "params": [
+        { "name": "user",  "kind": "address" },
+        { "name": "asset", "kind": "address" }
+      ]
+    }
+  ]
+}

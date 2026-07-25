@@ -84,6 +84,34 @@ impl ExplorerContract {
         env.storage().instance().set(&DataKey::EventSeq, &0u64);
     }
 
+    /// Transfer admin rights to a new address.
+    ///
+    /// Only the current admin may call this.  Both `current_admin` and
+    /// `new_admin` must authorise the transaction so that a mis-typed address
+    /// cannot accidentally lock the contract.
+    ///
+    /// Key-management recommendation: keep `new_admin` on a hardware wallet
+    /// (Ledger/Trezor) or use a multi-sig account.  See SECURITY.md for the
+    /// emergency recovery procedure.
+    pub fn transfer_admin(env: Env, current_admin: Address, new_admin: Address) {
+        current_admin.require_auth();
+        new_admin.require_auth();
+
+        let stored: Address = env.storage().instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
+
+        if current_admin != stored {
+            panic_with_error!(&env, Error::Unauthorized);
+        }
+
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
+        env.events().publish(
+            (symbol_short!("adm_xfr"),),
+            (current_admin, new_admin),
+        );
+    }
+
     // ── Contract Registry ─────────────────────────────────────────────────────
 
     /// Register ABI-like metadata for a Soroban contract.
@@ -258,5 +286,40 @@ mod tests {
         let admin = Address::generate(&env);
         client.init(&admin);
         client.init(&admin); // should panic
+    }
+
+    #[test]
+    fn test_transfer_admin() {
+        let (env, client) = setup();
+        let admin     = Address::generate(&env);
+        let new_admin = Address::generate(&env);
+        client.init(&admin);
+
+        // Transfer admin rights to new_admin
+        client.transfer_admin(&admin, &new_admin);
+
+        // new_admin can now submit events; old admin cannot
+        let cid: BytesN<32> = BytesN::from_array(&env, &[3u8; 32]);
+        client.submit_event(
+            &new_admin,
+            &cid,
+            &symbol_short!("test"),
+            &1u32,
+            &String::from_str(&env, "test event"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+        assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_transfer_admin_wrong_caller_panics() {
+        let (env, client) = setup();
+        let admin    = Address::generate(&env);
+        let attacker = Address::generate(&env);
+        client.init(&admin);
+        // attacker tries to hijack admin — must panic
+        client.transfer_admin(&attacker, &attacker);
     }
 }

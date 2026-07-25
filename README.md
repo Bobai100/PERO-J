@@ -105,6 +105,7 @@ make dev
 | Function | Description |
 |----------|-------------|
 | `init(admin)` | Initialise contract with admin address |
+| `transfer_admin(current_admin, new_admin)` | Transfer admin rights; both parties must sign |
 | `register_contract(caller, contract_id, meta)` | Register ABI metadata for a contract |
 | `update_contract(caller, contract_id, meta)` | Update metadata (admin or registrant) |
 | `get_contract(contract_id)` | Fetch contract metadata |
@@ -119,11 +120,44 @@ make dev
 
 | Endpoint | Description |
 |----------|-------------|
+| `GET /health` | Liveness + lag probe — returns `lag_seconds`, `uptime_seconds`, `last_ledger`. HTTP 200 when healthy, 503 when `lag_seconds > 30`. |
 | `GET /api/events?contract=&fn=&page=` | Paginated event list |
 | `GET /api/events/:seq` | Single event |
 | `GET /api/contracts/:id` | Contract ABI metadata |
 | `POST /api/contracts` | Register contract metadata |
 | `GET /api/wallet/:address` | Wallet event history |
+
+### Uptime Monitoring
+
+Configure an external monitor (UptimeRobot, Better Uptime, or similar) to call
+`GET /health` every **60 seconds** and alert when the response is HTTP 503 **or**
+`lag_seconds > 30`.  This satisfies ROADMAP Tranche 2 deliverable 2.7 (< 10 s
+index lag under normal load, alert threshold 30 s).
+
+Example healthy response:
+```json
+{
+  "status": "ok",
+  "uptime_seconds": 3600,
+  "lag_seconds": 4,
+  "last_ledger": 5214892,
+  "last_indexed_at": "2026-07-25T21:00:00.000Z"
+}
+```
+
+Example degraded response (HTTP 503):
+```json
+{
+  "status": "degraded",
+  "uptime_seconds": 7200,
+  "lag_seconds": 142,
+  "last_ledger": 5214750,
+  "last_indexed_at": "2026-07-25T20:57:38.000Z"
+}
+```
+
+Override the alert threshold via the `LAG_ALERT_THRESHOLD_S` environment variable
+(default `30`).
 
 ---
 

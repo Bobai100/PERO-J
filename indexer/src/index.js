@@ -4,11 +4,24 @@ import { startApi } from "./api.js";
 import { db } from "./db.js";
 import { decode } from "./decoder.js";
 
-const RPC_URL    = process.env.SOROBAN_RPC_URL    || "https://soroban-testnet.stellar.org";
+const RPC_URL      = process.env.SOROBAN_RPC_URL    || "https://soroban-testnet.stellar.org";
 const START_LEDGER = Number(process.env.START_LEDGER || 0);
-const POLL_MS    = Number(process.env.POLL_MS       || 5000);
+const POLL_MS      = Number(process.env.POLL_MS      || 5000);
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
+
+/**
+ * Shared health state exposed to the REST API via api.js.
+ * Updated each time a ledger is successfully indexed.
+ */
+export const health = {
+  /** Timestamp (ms) of the last successfully processed ledger, or null if none yet. */
+  lastIndexedAt: null,
+  /** Most-recently processed ledger sequence number. */
+  lastLedger: null,
+  /** Process start time for uptime calculation. */
+  startedAt: Date.now(),
+};
 
 async function indexLedger(ledger) {
   // getEvents supports cursor-based pagination; we use ledger range here
@@ -23,6 +36,10 @@ async function indexLedger(ledger) {
     await db.upsertEvent(decoded);
     console.log(`[${ev.ledger}] ${decoded.function}: ${decoded.description}`);
   }
+
+  // Record the time we finished processing this ledger batch
+  health.lastIndexedAt = Date.now();
+  health.lastLedger    = res.latestLedger;
 
   return res.latestLedger;
 }

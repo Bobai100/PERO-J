@@ -1,12 +1,45 @@
 import express from "express";
 import { db } from "./db.js";
 import { fetchTokenMetadata } from "./sep41Metadata.js";
+import { health } from "./index.js";
 
 const PORT = process.env.PORT || 3001;
 
 export function startApi() {
   const app = express();
   app.use(express.json());
+
+  // GET /health — liveness + lag probe for uptime monitors
+  // Returns HTTP 200 when healthy, 503 when lag exceeds the threshold.
+  // External monitors (e.g. UptimeRobot, Better Uptime) should call this
+  // every 60 seconds and alert when lag_seconds > 30.
+  app.get("/health", (req, res) => {
+    const LAG_ALERT_THRESHOLD_S = Number(process.env.LAG_ALERT_THRESHOLD_S || 30);
+    const now = Date.now();
+    const uptimeSeconds = Math.floor((now - health.startedAt) / 1000);
+
+    let lagSeconds = null;
+    if (health.lastIndexedAt !== null) {
+      lagSeconds = Math.floor((now - health.lastIndexedAt) / 1000);
+    }
+
+    const degraded = lagSeconds === null || lagSeconds > LAG_ALERT_THRESHOLD_S;
+    const status   = degraded ? "degraded" : "ok";
+
+    const body = {
+      status,
+      uptime_seconds:  uptimeSeconds,
+      lag_seconds:     lagSeconds,
+      last_ledger:     health.lastLedger,
+      // ISO timestamp of last successful index — handy for human readers
+      last_indexed_at: health.lastIndexedAt
+        ? new Date(health.lastIndexedAt).toISOString()
+        : null,
+    };
+
+    // 503 lets uptime monitors that check HTTP status codes fire automatically
+    res.status(degraded ? 503 : 200).json(body);
+  });
 
   // GET /api/events?contract=&fn=&page=
   app.get("/api/events", async (req, res) => {
