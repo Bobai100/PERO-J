@@ -1,4 +1,4 @@
-.PHONY: build test deploy indexer frontend clean
+.PHONY: build test deploy indexer frontend clean seed-testnet load-test
 
 # ── Contract ──────────────────────────────────────────────────────────────────
 build:
@@ -44,3 +44,30 @@ dev:
 clean:
 	cargo clean
 	rm -rf frontend/dist
+
+# ── Testnet seed (issue #120) ─────────────────────────────────────────────────
+# Register StellarSwap and Blend ABI fixtures via the running REST API.
+# Requires: API running on $(API_BASE_URL) (default http://localhost:3001)
+#           curl available on PATH
+API_BASE_URL ?= http://localhost:3001
+
+seed-testnet:
+	@echo "Registering StellarSwap ABI..."
+	curl -sf -X POST $(API_BASE_URL)/api/contracts \
+	  -H "Content-Type: application/json" \
+	  -d @indexer/fixtures/stellarswap-abi.json
+	@echo ""
+	@echo "Registering Blend ABI..."
+	curl -sf -X POST $(API_BASE_URL)/api/contracts \
+	  -H "Content-Type: application/json" \
+	  -d @indexer/fixtures/blend-abi.json
+	@echo ""
+	@echo "Testnet ABIs registered."
+
+# ── Load test (issue #121) ────────────────────────────────────────────────────
+# Run the k6 load test against $(API_BASE_URL).
+# Requires: k6 — https://grafana.com/docs/k6/latest/set-up/install-k6/
+load-test:
+	k6 run \
+	  --env API_BASE_URL=$(API_BASE_URL) \
+	  tests/load/api_load_test.js
