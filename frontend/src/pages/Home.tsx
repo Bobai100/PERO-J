@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
+import Skeleton from "../components/Skeleton";
 
 const FUNCTIONS = ["", "swap", "transfer", "mint", "burn", "stake", "unstake"];
 
@@ -32,7 +33,7 @@ export default function Home() {
       </div>
 
       <div className="card">
-        {isLoading ? <p style={{ color: "var(--muted)" }}>Loading…</p> : <EventTable events={events} />}
+        {isLoading ? <Skeleton /> : <EventTable events={events} />}
       </div>
 
       {/* Pagination */}

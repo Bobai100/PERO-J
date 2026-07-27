@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StrKey } from "@stellar/stellar-sdk";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
+import Skeleton from "../components/Skeleton";
 
 export default function WalletPage() {
   const { address = "" } = useParams();
@@ -28,7 +29,7 @@ export default function WalletPage() {
           : !isValidAddress
           ? <p style={{ color: "var(--muted)" }}>Invalid Stellar address.</p>
           : isLoading
-          ? <p style={{ color: "var(--muted)" }}>Loading…</p>
+          ? <Skeleton />
           : <EventTable events={events} />}
       </div>
     </div>

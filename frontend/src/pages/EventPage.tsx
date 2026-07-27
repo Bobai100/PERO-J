@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
+import Skeleton from "../components/Skeleton";
 
 export default function EventPage() {
   const { seq = "0" } = useParams();
@@ -10,7 +11,7 @@ export default function EventPage() {
     queryFn: () => api.event(Number(seq)),
   });
 
-  if (isLoading) return <p style={{ color: "var(--muted)" }}>Loading…</p>;
+  if (isLoading) return <div className="card"><Skeleton rows={4} /></div>;
   if (!ev) return <p>Event not found.</p>;
 
   return (
@@ -21,6 +22,7 @@ export default function EventPage() {
         <Row label="Description" value={ev.description} highlight />
         <Row label="Function"    value={ev.function} badge />
         <Row label="Ledger"      value={ev.ledger.toLocaleString()} />
+        {ev.created_at && <Row label="Time" value={new Date(ev.created_at).toUTCString()} />}
         <Row label="Contract"    value={<Link to={`/contract/${ev.contract_id}`}>{ev.contract_id}</Link>} />
         {ev.tx_hash && <Row label="Tx Hash" value={ev.tx_hash} mono />}
         {ev.raw_topics.length > 0 && (
