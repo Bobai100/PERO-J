@@ -23,7 +23,7 @@ indexer-install:
 	cd indexer && npm install
 
 indexer:
-	cd indexer && npm start
+	cd indexer && NODE_ENV=production npm start
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend-install:

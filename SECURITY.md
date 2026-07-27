@@ -1,65 +1,95 @@
 # Security Policy
 
-## Admin Key Management
+## Supported Versions
 
-The PERO-J contract uses a single privileged **admin** address that is set once at
-`init()` time.  Only the admin may call `submit_event`, so key loss or compromise
-permanently disrupts on-chain event submission.
+| Version | Status | Security Updates |
+|---------|--------|------------------|
+| 1.x (Testnet) | Active | Yes |
+| < 1.0 | Pre-release | No |
 
-### Recommendations
-
-| Risk | Mitigation |
-|------|-----------|
-| Key loss | Store the admin private key on a **hardware wallet** (Ledger, Trezor). Never keep it in plain text or in a `.env` file committed to git. |
-| Key compromise | Rotate immediately using `transfer_admin` (see below). |
-| Single point of failure | Use a **multi-sig account** (e.g. via [Stellar multisig](https://developers.stellar.org/docs/learn/encyclopedia/transactions-specialized/multisig)) as the admin address. Require ≥ 2-of-3 signers for production. |
-
-### Rotating the Admin Key (`transfer_admin`)
-
-The contract exposes a `transfer_admin(current_admin, new_admin)` function.
-**Both** the old and new admin must sign the transaction to prevent accidental
-lock-out from a mis-typed address.
-
-```bash
-# Example using Stellar CLI (adjust network flags as needed)
-stellar contract invoke \
-  --id  $EXPLORER_CONTRACT_ID  \
-  --source current-admin-key   \
-  --network testnet             \
-  -- transfer_admin             \
-  --current_admin $OLD_ADMIN_ADDRESS \
-  --new_admin     $NEW_ADMIN_ADDRESS
-```
-
-> The new admin must also sign.  Construct the transaction, share it with the
-> new key holder, and collect their signature before submitting.
-
-### Emergency Recovery
-
-If the admin key is **lost** before a `transfer_admin` is executed:
-
-1. The contract is effectively frozen — no new on-chain events can be submitted.
-2. All historical data stored in the contract remains readable.
-3. The off-chain PostgreSQL database (maintained by the indexer) is unaffected
-   and continues to serve the REST API.
-4. Recovery requires re-deploying a fresh contract instance and re-registering
-   all ABIs.  Keep a backup of your `indexer/fixtures/` ABI files and the
-   `seed-testnet` Makefile target for this reason.
-
-**Preventive action:** always rotate to a multi-sig admin before going to mainnet.
+Mainnet releases will receive security updates for a minimum of 12 months from release.
 
 ## Reporting a Vulnerability
 
-Please report security issues by opening a **private** GitHub Security Advisory
-at <https://github.com/john2ydep2-gt/PERO-J/security/advisories/new>.
+If you discover a security vulnerability in PERO-J, please report it privately to prevent public disclosure before a fix is available.
 
-Do **not** open a public issue for security-sensitive bugs.
+**Do not open a public GitHub issue for security vulnerabilities.**
 
-Expected response time: **48 hours**.
+### Reporting Methods
 
-## Supported Versions
+1. **GitHub Security Advisory (Preferred)**
+   - Navigate to the [Security tab](https://github.com/PERO-J/PERO-J/security/advisories)
+   - Click "Report a vulnerability"
+   - Fill out the form with details of the vulnerability
+   - This creates a private discussion visible only to maintainers
 
-| Version | Supported |
-|---------|-----------|
-| `main`  | ✅ Yes     |
-| older   | ❌ No — please upgrade |
+2. **Email**
+   - Send a detailed report to: `security@pero-j.dev`
+   - Include steps to reproduce, impact assessment, and proposed remediation
+   - PGP key available upon request for highly sensitive disclosures
+
+### What to Include
+
+- **Description:** Clear explanation of the vulnerability
+- **Type:** (e.g., smart contract logic flaw, input validation, XSS, injection, etc.)
+- **Affected Component:** (e.g., on-chain contract, indexer, frontend)
+- **Steps to Reproduce:** Detailed instructions or proof-of-concept
+- **Impact:** Severity and potential consequences
+- **Suggested Fix:** (optional, but appreciated)
+
+## Response Timeline
+
+- **Initial Acknowledgment:** Within 24 hours
+- **Triage & Assessment:** Within 72 hours
+- **Fix Development & Testing:** Varies by severity (see below)
+- **Public Disclosure:** Coordinated with the reporter, typically 30–90 days after a fix is released
+
+### Severity Levels
+
+| Severity | Examples | Timeline |
+|----------|----------|----------|
+| **Critical** | Fund loss, contract lock-up, consensus failure | 7 days |
+| **High** | Unauthorized state changes, access control bypass | 14 days |
+| **Medium** | Information leakage, denial-of-service | 30 days |
+| **Low** | Minor bugs, edge cases with limited impact | 60 days |
+
+## Responsible Disclosure
+
+We follow coordinated vulnerability disclosure practices:
+
+1. Researchers report vulnerabilities privately
+2. PERO-J maintainers acknowledge receipt and begin investigation
+3. A patch is developed and tested
+4. The fix is released, and the vulnerability is publicly disclosed after release
+5. Credit is given to the reporter (unless anonymity is requested)
+
+We do not offer monetary bug bounties at this time, but we recognize responsible disclosures in release notes and on this page.
+
+## Security Best Practices
+
+### For Users
+
+- **Do not share your Stellar private keys** with any service, including PERO-J
+- Use testnet for exploratory transactions before mainnet deployment
+- Verify contract addresses before calling smart contracts
+- Monitor your wallet transactions regularly
+
+### For Developers
+
+- Review the contract code in `contract/` before integrating PERO-J ABIs
+- Test ABI decoders with known-good values before trusting decoded events
+- Keep dependencies up-to-date (`npm audit`, `cargo audit`)
+- Do not hardcode secrets in environment files; use a secure secrets manager
+
+## Security Audits
+
+PERO-J has not undergone a third-party security audit. The project is currently in **testnet development**. A formal audit is planned before mainnet deployment as outlined in [ROADMAP.md](ROADMAP.md).
+
+## Contact
+
+For non-security questions or general inquiries, please open a GitHub issue or discussion. For security matters, use the reporting methods above.
+
+---
+
+**Last Updated:** 2026-07-27  
+**Policy Version:** 1.0
