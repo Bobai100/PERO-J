@@ -8,6 +8,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve frontend issues [#90](../../issues/90) [#91](../../issues/91) [#92](../../issues/92) [#93](../../issues/93) ([`5da7959`](../../commit/5da79592839c0627076ad979a3c751add9bbf36c))
+
+[#90](../../issues/90) - Add Skeleton component with shimmer animation; replace all plain
+       'Loading…' text in Home, ContractPage, WalletPage, and EventPage
+       with shaped placeholder rows that match the EventTable layout,
+       eliminating layout shift on data load.
+
+  [#91](../../issues/91) - Read API base URL from VITE_API_URL env variable with '/api'
+       fallback so the frontend works on separate-origin deployments
+       (e.g. CDN frontend + api.pero-j.io API) without CORS errors.
+       Document VITE_API_URL in .env.example.
+
+  [#92](../../issues/92) - Configure QueryClient with staleTime: 30_000 (30 s) to prevent
+       stale event-feed data. Add registerContract to api.ts and wire
+       useMutation + queryClient.invalidateQueries({ queryKey: ['contract', id] })
+       in ContractPage so metadata updates are reflected immediately
+       after a successful POST /api/contracts.
+
+  [#93](../../issues/93) - Add created_at?: string to DecodedEvent interface. Display it
+       in EventPage as a human-readable UTC timestamp using
+       new Date(ev.created_at).toUTCString(), giving users a readable
+       time alongside the raw ledger number
+
+
 - Resolve issues [#118](../../issues/118)-[#121](../../issues/121) — health endpoint, transfer_admin, ABI fixtures, load test ([`2a1664e`](../../commit/2a1664e8dcbfdd90dfd52bebdb20dce3ccd8802b))
 
 Issue [#118](../../issues/118) — Contract admin key management
@@ -39,6 +63,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`193eeee`](../../commit/193eeee984e6e2cf5193124884bae892d6d428d9))
 
 - Add issue and PR templates ([`a63913f`](../../commit/a63913ff65e8116ff4fdde38bbed0774001f6d9e))
 
