@@ -1,4 +1,4 @@
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_URL || "/api";
 
 export interface DecodedEvent {
   seq: number;
@@ -8,6 +8,7 @@ export interface DecodedEvent {
   description: string;
   raw_topics: string[];
   tx_hash?: string;
+  created_at?: string;
 }
 
 export interface ContractMeta {
@@ -23,6 +24,16 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+  return res.json();
+}
+
 export const api = {
   events: (params: { contract?: string; fn?: string; page?: number }) => {
     const q = new URLSearchParams();
@@ -31,7 +42,8 @@ export const api = {
     if (params.page)     q.set("page", String(params.page));
     return get<DecodedEvent[]>(`/events?${q}`);
   },
-  event:    (seq: number)     => get<DecodedEvent>(`/events/${seq}`),
-  contract: (id: string)      => get<ContractMeta>(`/contracts/${id}`),
-  wallet:   (address: string) => get<DecodedEvent[]>(`/wallet/${address}`),
+  event:            (seq: number)        => get<DecodedEvent>(`/events/${seq}`),
+  contract:         (id: string)         => get<ContractMeta>(`/contracts/${id}`),
+  wallet:           (address: string)    => get<DecodedEvent[]>(`/wallet/${address}`),
+  registerContract: (meta: ContractMeta) => post<{ ok: boolean }>("/contracts", meta),
 };

@@ -1,10 +1,12 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
+import Skeleton from "../components/Skeleton";
 
 export default function ContractPage() {
   const { id = "" } = useParams();
+  const queryClient = useQueryClient();
 
   const { data: meta, isLoading: metaLoading } = useQuery({
     queryKey: ["contract", id],
@@ -18,7 +20,16 @@ export default function ContractPage() {
     enabled: !!id,
   });
 
-  if (metaLoading) return <p style={{ color: "var(--muted)" }}>Loading…</p>;
+  // Invalidate contract cache after a successful registration so the page
+  // reflects the new metadata immediately without waiting for staleTime to expire.
+  const registerMutation = useMutation({
+    mutationFn: api.registerContract,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contract", id] });
+    },
+  });
+
+  if (metaLoading) return <div className="card"><Skeleton rows={3} /></div>;
   if (!meta) return <p>Contract not found.</p>;
 
   return (
@@ -41,11 +52,29 @@ export default function ContractPage() {
             </div>
           </div>
         )}
+
+        {/* Re-register button: triggers cache invalidation so updated metadata
+            is reflected immediately rather than waiting for staleTime to expire. */}
+        <button
+          style={{ marginTop: 16 }}
+          disabled={registerMutation.isPending}
+          onClick={() => registerMutation.mutate(meta)}
+        >
+          {registerMutation.isPending ? "Saving…" : "Update registration"}
+        </button>
+        {registerMutation.isError && (
+          <p style={{ color: "red", marginTop: 8 }}>
+            {(registerMutation.error as Error).message}
+          </p>
+        )}
+        {registerMutation.isSuccess && (
+          <p style={{ color: "green", marginTop: 8 }}>Registration updated.</p>
+        )}
       </div>
 
       <h3>Recent Events</h3>
       <div className="card">
-        {evLoading ? <p style={{ color: "var(--muted)" }}>Loading…</p> : <EventTable events={events} />}
+        {evLoading ? <Skeleton /> : <EventTable events={events} />}
       </div>
     </div>
   );
