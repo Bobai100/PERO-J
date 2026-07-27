@@ -10,6 +10,7 @@
  *   node src/validateSep41.js <contractId>
  */
 import "dotenv/config";
+import { fileURLToPath } from "url";
 import {
   SorobanRpc,
   TransactionBuilder,
@@ -109,7 +110,7 @@ export async function validateSep41(contractId) {
 }
 
 // CLI entry point
-if (process.argv[1].endsWith("validateSep41.js")) {
+if (process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url)) {
   const contractId = process.argv[2];
   if (!contractId) {
     console.error("Usage: node src/validateSep41.js <contractId>");

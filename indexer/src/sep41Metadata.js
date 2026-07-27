@@ -19,13 +19,23 @@ const DUMMY_SOURCE = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
+const contractCache = new Map();
+
+function getContract(contractId) {
+  if (!contractCache.has(contractId)) {
+    contractCache.set(contractId, new Contract(contractId));
+  }
+  return contractCache.get(contractId);
+}
+
+const dummyAccount = new Account(DUMMY_SOURCE, "0");
+
 /**
  * Simulate a no-arg contract call and return the native ScVal result.
  */
-async function simulateCall(contractId, method) {
-  const account = new Account(DUMMY_SOURCE, "0");
-  const contract = new Contract(contractId);
-  const tx = new TransactionBuilder(account, {
+async function simulateCall(contractOrId, method) {
+  const contract = typeof contractOrId === "string" ? getContract(contractOrId) : contractOrId;
+  const tx = new TransactionBuilder(dummyAccount, {
     fee: "100",
     networkPassphrase: NETWORK_PASSPHRASE,
   })
@@ -47,10 +57,11 @@ async function simulateCall(contractId, method) {
  * @returns {Promise<{ name: string, symbol: string, decimals: number }>}
  */
 export async function fetchTokenMetadata(contractId) {
+  const contract = getContract(contractId);
   const [name, symbol, decimals] = await Promise.all([
-    simulateCall(contractId, "name"),
-    simulateCall(contractId, "symbol"),
-    simulateCall(contractId, "decimals"),
+    simulateCall(contract, "name"),
+    simulateCall(contract, "symbol"),
+    simulateCall(contract, "decimals"),
   ]);
 
   return {
