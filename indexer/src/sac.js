@@ -29,7 +29,7 @@ function buildSacMap(assets) {
 
 // Well-known SAC assets (extend as needed via env or config)
 const KNOWN_ASSETS = [
-  { code: "native" },   // XLM
+  { code: "native" }, // XLM
   ...(process.env.SAC_ASSETS ? JSON.parse(process.env.SAC_ASSETS) : []),
 ];
 

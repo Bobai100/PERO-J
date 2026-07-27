@@ -240,6 +240,7 @@ The decoder recognises SEP-41 token events (`transfer`, `mint`, `burn`) and form
 
 | Document | Description |
 |----------|-------------|
+| [CHANGELOG.md](CHANGELOG.md) | Full release history — what changed, what broke, what was added |
 | [ROADMAP.md](ROADMAP.md) | 3-tranche milestone plan (MVP → Testnet → Mainnet) |
 | [BUDGET.md](BUDGET.md) | Engineering hours and cost breakdown per tranche |
 | [TEAM.md](TEAM.md) | Team bios and qualification evidence |

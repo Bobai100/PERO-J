@@ -1,4 +1,4 @@
-.PHONY: build test deploy indexer frontend clean seed-testnet load-test
+.PHONY: build test deploy indexer frontend clean seed-testnet load-test changelog
 
 # ── Contract ──────────────────────────────────────────────────────────────────
 build:
@@ -71,3 +71,10 @@ load-test:
 	k6 run \
 	  --env API_BASE_URL=$(API_BASE_URL) \
 	  tests/load/api_load_test.js
+
+# ── Changelog ─────────────────────────────────────────────────────────────────
+# Regenerate CHANGELOG.md from conventional commits using git-cliff.
+# Install: cargo install git-cliff  OR  brew install git-cliff
+changelog:
+	git-cliff --config cliff.toml --output CHANGELOG.md
+	@echo "CHANGELOG.md updated."

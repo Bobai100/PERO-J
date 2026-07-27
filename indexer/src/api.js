@@ -24,17 +24,15 @@ export function startApi() {
     }
 
     const degraded = lagSeconds === null || lagSeconds > LAG_ALERT_THRESHOLD_S;
-    const status   = degraded ? "degraded" : "ok";
+    const status = degraded ? "degraded" : "ok";
 
     const body = {
       status,
-      uptime_seconds:  uptimeSeconds,
-      lag_seconds:     lagSeconds,
-      last_ledger:     health.lastLedger,
+      uptime_seconds: uptimeSeconds,
+      lag_seconds: lagSeconds,
+      last_ledger: health.lastLedger,
       // ISO timestamp of last successful index — handy for human readers
-      last_indexed_at: health.lastIndexedAt
-        ? new Date(health.lastIndexedAt).toISOString()
-        : null,
+      last_indexed_at: health.lastIndexedAt ? new Date(health.lastIndexedAt).toISOString() : null,
     };
 
     // 503 lets uptime monitors that check HTTP status codes fire automatically
@@ -46,29 +44,39 @@ export function startApi() {
     try {
       const events = await db.getEvents({
         contract: req.query.contract,
-        fn:       req.query.fn,
-        page:     Number(req.query.page) || 1,
+        fn: req.query.fn,
+        page: Number(req.query.page) || 1,
       });
       res.json(events);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // GET /api/events/:seq
   app.get("/api/events/:seq", async (req, res) => {
     try {
       const ev = await db.getEvent(Number(req.params.seq));
-      if (!ev) return res.status(404).json({ error: "Not found" });
+      if (!ev) {
+        return res.status(404).json({ error: "Not found" });
+      }
       res.json(ev);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // GET /api/contracts/:id
   app.get("/api/contracts/:id", async (req, res) => {
     try {
       const meta = await db.getContractMeta(req.params.id);
-      if (!meta) return res.status(404).json({ error: "Not found" });
+      if (!meta) {
+        return res.status(404).json({ error: "Not found" });
+      }
       res.json(meta);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // POST /api/contracts  — register ABI metadata
@@ -76,7 +84,9 @@ export function startApi() {
     try {
       await db.upsertContractMeta(req.body);
       res.status(201).json({ ok: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // GET /api/wallet/:address
@@ -84,7 +94,9 @@ export function startApi() {
     try {
       const events = await db.getWalletEvents(req.params.address);
       res.json(events);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // GET /api/tokens/:id/volume  — 24-hour rolling transfer volume
@@ -96,11 +108,15 @@ export function startApi() {
       try {
         const meta = await fetchTokenMetadata(contractId);
         decimals = meta.decimals;
-      } catch { /* use default */ }
+      } catch {
+        /* use default */
+      }
 
       const volume = await db.get24hVolume(contractId, decimals);
       res.json({ contract_id: contractId, window: "24h", ...volume });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.listen(PORT, () => console.log(`API listening on :${PORT}`));

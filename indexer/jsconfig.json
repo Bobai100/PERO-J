@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    // Tell VS Code (and tsc --checkJs) to type-check JavaScript files.
+    "checkJs": true,
+
+    // Strict null checking: catches the "field may be undefined" class of bug
+    // that originally motivated the DecodedEvent typedef work.
+    "strictNullChecks": true,
+
+    // Module resolution that matches the Node.js ESM loader (package.json "type":"module").
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Target Node 20+ — aligns with the engines field in package.json.
+    "target": "ES2022",
+
+    // Allow JS files to @import types from node_modules @types packages.
+    "allowSyntheticDefaultImports": true,
+
+    // Do not emit compiled output — we run source directly with node.
+    "noEmit": true,
+
+    // Surfaces unused locals in the editor (helps catch missed field renames).
+    "noUnusedLocals": false,
+
+    // Paths are relative to this jsconfig.json.
+    "baseUrl": "."
+  },
+  "include": [
+    "src/**/*.js",
+    "test/**/*.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
