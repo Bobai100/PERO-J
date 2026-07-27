@@ -1,24 +1,35 @@
-import { xdr, scValToNative, StrKey } from "@stellar/stellar-sdk";
+import { scValToNative } from "@stellar/stellar-sdk";
 import { db } from "./db.js";
-import { sacLabel, detectSac } from "./sac.js";
+import { detectSac } from "./sac.js";
+
+/** @typedef {import('./types.js').DecodedEvent} DecodedEvent */
+/** @typedef {import('./types.js').ContractMeta} ContractMeta */
+/** @typedef {import('./types.js').FunctionAbi} FunctionAbi */
 
 /**
  * Decode a raw Soroban RPC event into a human-readable record.
  * Falls back to a generic description when no ABI is registered.
+ *
+ * @param {object} ev - Raw event object from SorobanRpc.getEvents()
+ * @param {string}   ev.contractId - Strkey-encoded contract address
+ * @param {object[]} ev.topic      - Array of XDR ScVal topic values
+ * @param {object}   ev.value      - XDR ScVal event data value
+ * @param {number}   ev.ledger     - Ledger sequence number
+ * @param {string}   ev.txHash     - Transaction hash
+ * @returns {Promise<DecodedEvent>}
  */
 export async function decode(ev) {
   const contractId = ev.contractId;
-  const topics     = ev.topic.map(t => scValToNative(t));
-  const data       = scValToNative(ev.value);
+  const topics = ev.topic.map((t) => scValToNative(t));
+  const data = scValToNative(ev.value);
 
   // First topic is typically the function name symbol
-  const fnName = typeof topics[0] === "symbol" || typeof topics[0] === "string"
-    ? String(topics[0])
-    : "unknown";
+  const fnName =
+    typeof topics[0] === "symbol" || typeof topics[0] === "string" ? String(topics[0]) : "unknown";
 
   // Look up registered ABI for richer description
   const meta = await db.getContractMeta(contractId).catch(() => null);
-  const fnAbi = meta?.functions?.find(f => f.name === fnName);
+  const fnAbi = meta?.functions?.find((f) => f.name === fnName);
 
   const { isSac, assetCode } = detectSac(contractId);
   const contractLabel = isSac
@@ -31,16 +42,25 @@ export async function decode(ev) {
 
   return {
     contract_id: contractId,
-    function:    fnName,
-    ledger:      ev.ledger,
-    tx_hash:     ev.txHash,
+    function: fnName,
+    ledger: ev.ledger,
+    tx_hash: ev.txHash,
     description,
-    raw_topics:  topics.map(String),
-    raw_data:    JSON.stringify(data),
+    raw_topics: topics.map(String),
+    raw_data: JSON.stringify(data),
     ...(isSac && { sac_asset: assetCode }),
   };
 }
 
+/**
+ * Build a rich human-readable description using registered ABI parameter names.
+ *
+ * @param {string} fn            - Function / event name
+ * @param {unknown[]} args       - Decoded topic values (topics[1..])
+ * @param {unknown} data         - Decoded event data ScVal
+ * @param {string} contractName  - Display name for the contract
+ * @returns {string}
+ */
 function buildDescription(fn, args, data, contractName) {
   switch (fn) {
     case "swap": {
@@ -64,12 +84,23 @@ function buildDescription(fn, args, data, contractName) {
   }
 }
 
+/**
+ * Produce a generic description for unrecognised function names.
+ *
+ * @param {string} fn           - Function / event name
+ * @param {unknown[]} args      - Decoded topic values
+ * @param {unknown} data        - Decoded event data (unused but kept for symmetry with buildDescription)
+ * @param {string} contractId   - Contract address or display name
+ * @returns {string}
+ */
 function genericDescription(fn, args, data, contractId) {
   const argStr = args.map(String).join(", ");
   return `${fn}(${argStr}) called on ${contractId}`;
 }
 
 function fmt(addr) {
-  if (typeof addr !== "string" || addr.length < 10) return String(addr);
+  if (typeof addr !== "string" || addr.length < 10) {
+    return String(addr);
+  }
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }

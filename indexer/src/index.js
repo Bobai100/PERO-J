@@ -1,18 +1,22 @@
 import "dotenv/config";
-import { SorobanRpc, xdr, StrKey } from "@stellar/stellar-sdk";
+import { SorobanRpc } from "@stellar/stellar-sdk";
 import { startApi } from "./api.js";
 import { db } from "./db.js";
 import { decode } from "./decoder.js";
 
-const RPC_URL      = process.env.SOROBAN_RPC_URL    || "https://soroban-testnet.stellar.org";
+/** @typedef {import('./types.js').HealthState} HealthState */
+
+const RPC_URL = process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 const START_LEDGER = Number(process.env.START_LEDGER || 0);
-const POLL_MS      = Number(process.env.POLL_MS      || 5000);
+const POLL_MS = Number(process.env.POLL_MS || 5000);
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
 /**
  * Shared health state exposed to the REST API via api.js.
  * Updated each time a ledger is successfully indexed.
+ *
+ * @type {HealthState}
  */
 export const health = {
   /** Timestamp (ms) of the last successfully processed ledger, or null if none yet. */
@@ -39,7 +43,7 @@ async function indexLedger(ledger) {
 
   // Record the time we finished processing this ledger batch
   health.lastIndexedAt = Date.now();
-  health.lastLedger    = res.latestLedger;
+  health.lastLedger = res.latestLedger;
 
   return res.latestLedger;
 }
@@ -57,7 +61,7 @@ async function run() {
     } catch (err) {
       console.error("Indexer error:", err.message);
     }
-    await new Promise(r => setTimeout(r, POLL_MS));
+    await new Promise((r) => setTimeout(r, POLL_MS));
   }
 }
 

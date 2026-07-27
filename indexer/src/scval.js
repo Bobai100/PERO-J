@@ -1,4 +1,4 @@
-import { xdr, StrKey } from "@stellar/stellar-sdk";
+import { StrKey } from "@stellar/stellar-sdk";
 
 /**
  * Convert any ScVal XDR object to a native JavaScript value.
@@ -8,7 +8,9 @@ import { xdr, StrKey } from "@stellar/stellar-sdk";
  * @returns {*} native JS primitive, object, or array
  */
 export function scValToJs(val) {
-  if (!val) return null;
+  if (!val) {
+    return null;
+  }
 
   const type = val.switch().name;
 

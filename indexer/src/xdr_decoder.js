@@ -3,8 +3,12 @@ import { xdr, StrKey, scValToNative } from "@stellar/stellar-sdk";
 const EVENT_TYPES = { 0: "system", 1: "contract", 2: "diagnostic" };
 
 function toJson(val) {
-  if (typeof val === "bigint") return val.toString();
-  if (Array.isArray(val)) return val.map(toJson);
+  if (typeof val === "bigint") {
+    return val.toString();
+  }
+  if (Array.isArray(val)) {
+    return val.map(toJson);
+  }
   if (val !== null && typeof val === "object") {
     return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, toJson(v)]));
   }

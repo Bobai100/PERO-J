@@ -2,15 +2,27 @@
   "name": "soroban-explorer-indexer",
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "12.3.0",
     "express": "4.19.2",
     "pg": "8.12.0",
     "dotenv": "16.4.5"
+  },
+  "devDependencies": {
+    "eslint": "9.9.0",
+    "@eslint/js": "9.9.0",
+    "globals": "15.9.0",
+    "prettier": "3.3.3"
   }
 }

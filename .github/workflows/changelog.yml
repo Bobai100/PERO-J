@@ -1,0 +1,49 @@
+name: Update Changelog
+
+# Regenerate CHANGELOG.md with git-cliff on every push to main,
+# then auto-commit the result if it changed.
+on:
+  push:
+    branches:
+      - main
+  # Allow manual reruns from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to push the auto-commit
+
+jobs:
+  changelog:
+    name: Regenerate CHANGELOG.md
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Check out the full history so git-cliff can walk all commits ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history required by git-cliff
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Install git-cliff ──────────────────────────────────────────────
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff@2.6.1
+
+      # ── 3. Generate the changelog ────────────────────────────────────────
+      # --output overwrites CHANGELOG.md in-place.
+      # If there are no new conventional commits the file is unchanged and
+      # the diff check below skips the commit step cleanly.
+      - name: Run git-cliff
+        run: git-cliff --config cliff.toml --output CHANGELOG.md
+
+      # ── 4. Commit and push only if CHANGELOG.md actually changed ─────────
+      - name: Commit updated CHANGELOG.md
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs(changelog): auto-update CHANGELOG.md [skip ci]"
+          file_pattern: CHANGELOG.md
+          # Prevents triggering another workflow run (the [skip ci] token in
+          # the commit message also stops most CI systems from re-triggering).
+          push_options: ""
