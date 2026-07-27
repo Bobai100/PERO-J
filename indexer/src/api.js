@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { db } from "./db.js";
 import { fetchTokenMetadata } from "./sep41Metadata.js";
 import { health } from "./index.js";
@@ -8,6 +9,15 @@ const PORT = process.env.PORT || 3001;
 export function startApi() {
   const app = express();
   app.use(express.json());
+
+  app.use(
+    rateLimit({
+      windowMs: 60_000,
+      max: 100,
+      standardHeaders: true,
+      legacyHeaders: false,
+    })
+  );
 
   // GET /health — liveness + lag probe for uptime monitors
   // Returns HTTP 200 when healthy, 503 when lag exceeds the threshold.
@@ -56,7 +66,12 @@ export function startApi() {
   // GET /api/events/:seq
   app.get("/api/events/:seq", async (req, res) => {
     try {
-      const ev = await db.getEvent(Number(req.params.seq));
+      const seqStr = String(req.params.seq).trim();
+      const seq = parseInt(seqStr, 10);
+      if (isNaN(seq) || seq < 0 || !/^\d+$/.test(seqStr)) {
+        return res.status(400).json({ error: "seq must be a non-negative integer" });
+      }
+      const ev = await db.getEvent(seq);
       if (!ev) {
         return res.status(404).json({ error: "Not found" });
       }
@@ -92,8 +107,10 @@ export function startApi() {
   // GET /api/wallet/:address
   app.get("/api/wallet/:address", async (req, res) => {
     try {
-      const events = await db.getWalletEvents(req.params.address);
-      res.json(events);
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 25;
+      const result = await db.getWalletEvents(req.params.address, { page, limit });
+      res.json(result);
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
