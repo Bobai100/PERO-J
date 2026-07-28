@@ -1,4 +1,7 @@
-.PHONY: build test deploy indexer frontend clean seed-testnet load-test changelog
+-include .env
+export EXPLORER_CONTRACT_ID
+
+.PHONY: build test deploy redeploy indexer frontend clean seed-testnet load-test changelog
 
 # ── Contract ──────────────────────────────────────────────────────────────────
 build:
@@ -13,6 +16,17 @@ optimize:
 	  --wasm target/wasm32-unknown-unknown/release/soroban_explorer_contract.wasm
 
 deploy: build optimize
+	@if [ -z "$$EXPLORER_CONTRACT_ID" ]; then \
+		stellar contract deploy \
+		  --wasm target/wasm32-unknown-unknown/release/soroban_explorer_contract.optimized.wasm \
+		  --source default \
+		  --network testnet; \
+	else \
+		echo "Warning: EXPLORER_CONTRACT_ID is already set. Use 'make redeploy' to force a new instance."; \
+		exit 1; \
+	fi
+
+redeploy: build optimize
 	stellar contract deploy \
 	  --wasm target/wasm32-unknown-unknown/release/soroban_explorer_contract.optimized.wasm \
 	  --source default \

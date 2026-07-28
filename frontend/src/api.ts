@@ -21,10 +21,29 @@ export interface ContractMeta {
   created_at?: string;
 }
 
+export interface WalletEventsResponse {
+  events: DecodedEvent[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(BASE + path);
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
-  return res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(BASE + path, { signal: controller.signal });
+    if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+    return res.json();
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -45,8 +64,8 @@ export const api = {
     if (params.page)     q.set("page", String(params.page));
     return get<DecodedEvent[]>(`/events?${q}`);
   },
-  event:            (seq: number)        => get<DecodedEvent>(`/events/${seq}`),
-  contract:         (id: string)         => get<ContractMeta>(`/contracts/${id}`),
-  wallet:           (address: string)    => get<DecodedEvent[]>(`/wallet/${address}`),
-  registerContract: (meta: ContractMeta) => post<{ ok: boolean }>("/contracts", meta),
+  event:            (seq: number)                         => get<DecodedEvent>(`/events/${seq}`),
+  contract:         (id: string)                          => get<ContractMeta>(`/contracts/${id}`),
+  wallet:           (address: string, page: number = 1)   => get<WalletEventsResponse>(`/wallet/${address}?page=${page}`),
+  registerContract: (meta: ContractMeta)                  => post<{ ok: boolean }>("/contracts", meta),
 };

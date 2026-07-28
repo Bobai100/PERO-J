@@ -1,0 +1,25 @@
+[package]
+name = "soroban-explorer-contract-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+arbitrary = { version = "1.3.0", features = ["derive"] }
+libfuzzer-sys = "0.4"
+soroban-sdk = { version = "21.0.0", features = ["testutils"] }
+
+[dependencies.soroban-explorer-contract]
+path = ".."
+
+[[bin]]
+name = "get_events"
+path = "fuzz_targets/get_events.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
