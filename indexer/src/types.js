@@ -56,6 +56,8 @@
  * @property {string}      raw_data     - JSON.stringify of the decoded event data ScVal.
  * @property {string}      [sac_asset]  - Classic asset code (e.g. "USDC") when the contract
  *                                        is a Stellar Asset Contract (SAC). Omitted otherwise.
+ * @property {number|null} [onchain_seq] - On-chain EventSeq value when submitted successfully.
+ *                                         DB seq remains the canonical REST/frontend identifier.
  */
 
 // ─── Health state ─────────────────────────────────────────────────────────────

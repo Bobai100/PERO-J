@@ -5,6 +5,55 @@ import pg from "pg";
 /** @typedef {import('./types.js').VolumeResult} VolumeResult */
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const MIGRATION_LOCK_ID = 57_056;
+
+const migrations = [
+  {
+    id: 1,
+    name: "create_events_and_contracts",
+    sql: `
+      CREATE TABLE IF NOT EXISTS events (
+        seq         BIGSERIAL PRIMARY KEY,
+        contract_id TEXT NOT NULL,
+        function    TEXT NOT NULL,
+        ledger      BIGINT NOT NULL,
+        tx_hash     TEXT,
+        description TEXT NOT NULL,
+        raw_topics  JSONB,
+        raw_data    TEXT,
+        sac_asset   TEXT,
+        onchain_seq BIGINT,
+        created_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS contracts (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        description TEXT,
+        functions   JSONB,
+        registered_by TEXT,
+        created_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+    `,
+  },
+  {
+    id: 2,
+    name: "add_events_optional_columns",
+    sql: `
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS onchain_seq BIGINT;
+    `,
+  },
+  {
+    id: 3,
+    name: "create_events_indexes",
+    sql: `
+      CREATE INDEX IF NOT EXISTS idx_events_contract ON events(contract_id);
+      CREATE INDEX IF NOT EXISTS idx_events_function ON events(function);
+      CREATE INDEX IF NOT EXISTS idx_events_ledger   ON events(ledger);
+    `,
+  },
+];
 
 process.on("unhandledRejection", async (err) => {
   console.error("Unhandled Rejection detected, closing database pool:", err);
@@ -17,37 +66,43 @@ process.on("unhandledRejection", async (err) => {
 });
 
 export const db = {
-  /** Create tables and indexes if they do not already exist.
+  /** Run advisory-locked schema migrations before startup.
    * @returns {Promise<void>}
    */
   async init() {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS events (
-        seq         BIGSERIAL PRIMARY KEY,
-        contract_id TEXT NOT NULL,
-        function    TEXT NOT NULL,
-        ledger      BIGINT NOT NULL,
-        tx_hash     TEXT,
-        description TEXT NOT NULL,
-        raw_topics  JSONB,
-        raw_data    TEXT,
-        sac_asset   TEXT,
-        created_at  TIMESTAMPTZ DEFAULT NOW()
-      );
-      ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT;
-      CREATE INDEX IF NOT EXISTS idx_events_contract ON events(contract_id);
-      CREATE INDEX IF NOT EXISTS idx_events_function ON events(function);
-      CREATE INDEX IF NOT EXISTS idx_events_ledger   ON events(ledger);
+    const client = await pool.connect();
+    try {
+      await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
+      await client.query("BEGIN");
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+          id         INTEGER PRIMARY KEY,
+          name       TEXT NOT NULL,
+          applied_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
 
-      CREATE TABLE IF NOT EXISTS contracts (
-        id          TEXT PRIMARY KEY,
-        name        TEXT NOT NULL,
-        description TEXT,
-        functions   JSONB,
-        registered_by TEXT,
-        created_at  TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
+      for (const migration of migrations) {
+        const { rowCount } = await client.query("SELECT 1 FROM schema_migrations WHERE id = $1", [
+          migration.id,
+        ]);
+        if (rowCount === 0) {
+          await client.query(migration.sql);
+          await client.query("INSERT INTO schema_migrations (id, name) VALUES ($1, $2)", [
+            migration.id,
+            migration.name,
+          ]);
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_ID]);
+      client.release();
+    }
   },
 
   /**
@@ -81,8 +136,11 @@ export const db = {
    */
   async upsertEvent(ev) {
     await pool.query(
-      `INSERT INTO events (contract_id, function, ledger, tx_hash, description, raw_topics, raw_data, sac_asset)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO events (
+         contract_id, function, ledger, tx_hash, description,
+         raw_topics, raw_data, sac_asset, onchain_seq
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT DO NOTHING`,
       [
         ev.contract_id,
@@ -93,6 +151,7 @@ export const db = {
         JSON.stringify(ev.raw_topics),
         ev.raw_data,
         ev.sac_asset ?? null,
+        ev.onchain_seq ?? null,
       ]
     );
   },
@@ -105,9 +164,11 @@ export const db = {
    * @param {string}  [opts.fn]        - Filter by function name (exact match).
    * @param {number}  [opts.page=1]    - 1-based page number.
    * @param {number}  [opts.limit=25]  - Rows per page.
-   * @returns {Promise<DecodedEvent[]>}
+   * @returns {Promise<{ events: DecodedEvent[], total: number, page: number, limit: number }>}
    */
   async getEvents({ contract, fn, page = 1, limit = 25 } = {}) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 25;
     const conditions = [];
     const params = [];
     if (contract) {
@@ -119,13 +180,18 @@ export const db = {
       conditions.push(`function = $${params.length}`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const offset = (page - 1) * limit;
-    params.push(limit, offset);
+    const countParams = [...params];
+    const countRes = await pool.query(`SELECT COUNT(*) FROM events ${where}`, countParams);
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    const offset = (pageNum - 1) * limitNum;
+    params.push(limitNum, offset);
     const { rows } = await pool.query(
-      `SELECT * FROM events ${where} ORDER BY ledger DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      `SELECT * FROM events ${where}
+       ORDER BY ledger DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
-    return rows;
+    return { events: rows, total, page: pageNum, limit: limitNum };
   },
 
   /**

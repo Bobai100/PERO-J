@@ -17,10 +17,13 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["events", fnFilter, customFn, page],
     queryFn: () => api.events({ fn: useCustom ? customFn : fnFilter || undefined, page }),
   });
+  const events = data?.events ?? [];
+  const total = data?.total ?? 0;
+  const limit = data?.limit ?? 25;
 
   const handleFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -82,7 +85,7 @@ export default function Home() {
       <div style={{ display: "flex", gap: 8 }}>
         <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
         <span style={{ padding: "6px 10px", color: "var(--muted)" }}>Page {page}</span>
-        <button disabled={events.length < 25} onClick={() => setPage(p => p + 1)}>Next →</button>
+        <button disabled={page * limit >= total} onClick={() => setPage(p => p + 1)}>Next →</button>
       </div>
     </div>
   );

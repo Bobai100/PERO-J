@@ -121,11 +121,16 @@ make dev
 | Endpoint | Description |
 |----------|-------------|
 | `GET /health` | Liveness + lag probe — returns `lag_seconds`, `uptime_seconds`, `last_ledger`. HTTP 200 when healthy, 503 when `lag_seconds > 30`. |
-| `GET /api/events?contract=&fn=&page=` | Paginated event list |
+| `GET /api/events?contract=&fn=&page=` | Paginated event list: `{ events, total, page, limit }` |
 | `GET /api/events/:seq` | Single event |
 | `GET /api/contracts/:id` | Contract ABI metadata |
 | `POST /api/contracts` | Register contract metadata |
 | `GET /api/wallet/:address` | Wallet event history |
+
+PostgreSQL `events.seq` is the canonical REST/frontend identifier. On-chain
+`EventSeq` values are stored separately as nullable `onchain_seq` values because
+the database row sequence and contract submission sequence are different
+namespaces and can diverge.
 
 ### Uptime Monitoring
 
