@@ -35,9 +35,11 @@ export const db = {
         created_at  TIMESTAMPTZ DEFAULT NOW()
       );
       ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS event_addresses TEXT[];
       CREATE INDEX IF NOT EXISTS idx_events_contract ON events(contract_id);
       CREATE INDEX IF NOT EXISTS idx_events_function ON events(function);
       CREATE INDEX IF NOT EXISTS idx_events_ledger   ON events(ledger);
+      CREATE INDEX IF NOT EXISTS idx_events_addresses ON events USING GIN(event_addresses);
 
       CREATE TABLE IF NOT EXISTS contracts (
         id          TEXT PRIMARY KEY,
@@ -81,8 +83,8 @@ export const db = {
    */
   async upsertEvent(ev) {
     await pool.query(
-      `INSERT INTO events (contract_id, function, ledger, tx_hash, description, raw_topics, raw_data, sac_asset)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO events (contract_id, function, ledger, tx_hash, description, raw_topics, raw_data, sac_asset, event_addresses)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT DO NOTHING`,
       [
         ev.contract_id,
@@ -93,6 +95,7 @@ export const db = {
         JSON.stringify(ev.raw_topics),
         ev.raw_data,
         ev.sac_asset ?? null,
+        ev.event_addresses ?? [],
       ]
     );
   },
@@ -155,14 +158,14 @@ export const db = {
     const offset = (pageNum - 1) * limitNum;
 
     const countRes = await pool.query(
-      "SELECT COUNT(*) FROM events WHERE description ILIKE $1 OR raw_topics::text ILIKE $1",
-      [`%${address}%`]
+      "SELECT COUNT(*) FROM events WHERE event_addresses @> ARRAY[$1]",
+      [address]
     );
     const total = parseInt(countRes.rows[0].count, 10);
 
     const { rows } = await pool.query(
-      "SELECT * FROM events WHERE description ILIKE $1 OR raw_topics::text ILIKE $1 ORDER BY ledger DESC LIMIT $2 OFFSET $3",
-      [`%${address}%`, limitNum, offset]
+      "SELECT * FROM events WHERE event_addresses @> ARRAY[$1] ORDER BY ledger DESC LIMIT $2 OFFSET $3",
+      [address, limitNum, offset]
     );
 
     return { events: rows, total, page: pageNum, limit: limitNum };
