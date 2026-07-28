@@ -9,6 +9,7 @@ export interface DecodedEvent {
   raw_topics: string[];
   tx_hash?: string;
   created_at?: string;
+  sac_asset?: string;
 }
 
 export interface ContractMeta {
@@ -16,6 +17,8 @@ export interface ContractMeta {
   name: string;
   description: string;
   functions: { name: string; description: string }[];
+  registered_by?: string;
+  created_at?: string;
 }
 
 export interface WalletEventsResponse {

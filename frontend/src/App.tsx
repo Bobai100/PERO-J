@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import ContractPage from "./pages/ContractPage";
 import WalletPage from "./pages/WalletPage";
 import EventPage from "./pages/EventPage";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
