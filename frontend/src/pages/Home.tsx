@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
@@ -7,13 +8,37 @@ import Skeleton from "../components/Skeleton";
 const FUNCTIONS = ["", "swap", "transfer", "mint", "burn", "stake", "unstake"];
 
 export default function Home() {
-  const [fnFilter, setFnFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [fnFilter, setFnFilter] = useState(searchParams.get("fn") || "");
+  const [contractFilter, setContractFilter] = useState(searchParams.get("contract") || "");
   const [page, setPage] = useState(1);
 
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (fnFilter) params.set("fn", fnFilter);
+    if (contractFilter) params.set("contract", contractFilter);
+    setSearchParams(params, { replace: true });
+  }, [fnFilter, contractFilter, setSearchParams]);
+
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events", fnFilter, page],
-    queryFn: () => api.events({ fn: fnFilter || undefined, page }),
+    queryKey: ["events", fnFilter, contractFilter, page],
+    queryFn: () => api.events({ 
+      fn: fnFilter || undefined, 
+      contract: contractFilter || undefined,
+      page 
+    }),
   });
+
+  const handleFilterChange = (fn: string) => {
+    setFnFilter(fn);
+    setPage(1);
+  };
+
+  const handleContractFilterChange = (contract: string) => {
+    setContractFilter(contract);
+    setPage(1);
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -25,11 +50,24 @@ export default function Home() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <label style={{ color: "var(--muted)" }}>Filter by function:</label>
-        <select value={fnFilter} onChange={e => { setFnFilter(e.target.value); setPage(1); }}>
+        <select value={fnFilter} onChange={e => handleFilterChange(e.target.value)}>
           {FUNCTIONS.map(f => <option key={f} value={f}>{f || "All"}</option>)}
         </select>
+        {contractFilter && (
+          <>
+            <span style={{ color: "var(--muted)" }}>|</span>
+            <span style={{ color: "var(--muted)" }}>Contract:</span>
+            <code style={{ fontSize: 12, color: "var(--text)" }}>{contractFilter.slice(0, 8)}…</code>
+            <button 
+              onClick={() => handleContractFilterChange("")}
+              style={{ padding: "4px 8px", fontSize: 12 }}
+            >
+              Clear
+            </button>
+          </>
+        )}
       </div>
 
       <div className="card">

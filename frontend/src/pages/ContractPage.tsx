@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
@@ -44,10 +44,22 @@ export default function ContractPage() {
             <h3 style={{ marginBottom: 8, fontSize: 14 }}>Functions</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {meta.functions.map(f => (
-                <div key={f.name} className="card" style={{ padding: "8px 12px" }}>
-                  <span className="badge">{f.name}</span>
-                  <span style={{ marginLeft: 8, color: "var(--muted)" }}>{f.description}</span>
-                </div>
+                <Link 
+                  key={f.name} 
+                  to={`/?contract=${id}&fn=${f.name}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <div className="card" style={{ padding: "8px 12px", cursor: "pointer", transition: "background 0.2s" }} onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.backgroundColor = "var(--border)";
+                  }} onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.backgroundColor = "";
+                  }}>
+                    <span className="badge">{f.name}</span>
+                    <span style={{ marginLeft: 8, color: "var(--muted)" }}>{f.description}</span>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
