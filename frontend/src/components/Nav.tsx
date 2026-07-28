@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 export default function Nav() {
   const [q, setQ] = useState("");
@@ -24,9 +24,19 @@ export default function Nav() {
       alignItems: "center",
       gap: 16,
     }}>
-      <Link to="/" style={{ fontWeight: 700, fontSize: 16, whiteSpace: "nowrap" }}>
+      <NavLink
+        to="/"
+        style={({ isActive }) => ({
+          fontWeight: 700,
+          fontSize: 16,
+          whiteSpace: "nowrap",
+          color: isActive ? "var(--accent)" : "inherit",
+          borderBottom: isActive ? "2px solid var(--accent)" : "none",
+          paddingBottom: isActive ? "4px" : "0px",
+        })}
+      >
         ⬡ Soroban Explorer
-      </Link>
+      </NavLink>
       <form onSubmit={search} style={{ display: "flex", gap: 8, flex: 1, maxWidth: 600 }}>
         <input
           value={q}
