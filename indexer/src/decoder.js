@@ -1,3 +1,4 @@
+import { LRUCache } from "lru-cache";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { db } from "./db.js";
 import { detectSac } from "./sac.js";
@@ -5,6 +6,11 @@ import { detectSac } from "./sac.js";
 /** @typedef {import('./types.js').DecodedEvent} DecodedEvent */
 /** @typedef {import('./types.js').ContractMeta} ContractMeta */
 /** @typedef {import('./types.js').FunctionAbi} FunctionAbi */
+
+const contractMetaCache = new LRUCache({
+  max: 500,
+  ttl: 60_000,
+});
 
 /**
  * Decode a raw Soroban RPC event into a human-readable record.
@@ -27,8 +33,12 @@ export async function decode(ev) {
   const fnName =
     typeof topics[0] === "symbol" || typeof topics[0] === "string" ? String(topics[0]) : "unknown";
 
-  // Look up registered ABI for richer description
-  const meta = await db.getContractMeta(contractId).catch(() => null);
+  // Look up registered ABI for richer description (cached with 60s TTL)
+  let meta = contractMetaCache.get(contractId);
+  if (meta === undefined) {
+    meta = await db.getContractMeta(contractId).catch(() => null);
+    contractMetaCache.set(contractId, meta);
+  }
   const fnAbi = meta?.functions?.find((f) => f.name === fnName);
 
   const { isSac, assetCode } = detectSac(contractId);
@@ -40,6 +50,8 @@ export async function decode(ev) {
     ? buildDescription(fnName, topics.slice(1), data, contractLabel)
     : genericDescription(fnName, topics.slice(1), data, contractLabel);
 
+  const eventAddresses = extractAddresses([...topics.slice(1), data]);
+
   return {
     contract_id: contractId,
     function: fnName,
@@ -48,6 +60,7 @@ export async function decode(ev) {
     description,
     raw_topics: topics.map(String),
     raw_data: JSON.stringify(data),
+    event_addresses: eventAddresses,
     ...(isSac && { sac_asset: assetCode }),
   };
 }
@@ -96,6 +109,27 @@ function buildDescription(fn, args, data, contractName) {
 function genericDescription(fn, args, data, contractId) {
   const argStr = args.map(String).join(", ");
   return `${fn}(${argStr}) called on ${contractId}`;
+}
+
+/**
+ * Walk through decoded values and collect all G… Stellar public addresses.
+ *
+ * @param {unknown[]} values - Decoded topic/data values from an event.
+ * @returns {string[]} Deduplicated list of G… addresses found.
+ */
+function extractAddresses(values) {
+  const found = new Set();
+  const walk = (v) => {
+    if (typeof v === "string" && /^G[A-Z0-9]{55}$/.test(v)) {
+      found.add(v);
+    } else if (Array.isArray(v)) {
+      v.forEach(walk);
+    } else if (v && typeof v === "object") {
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(values);
+  return [...found];
 }
 
 function fmt(addr) {
