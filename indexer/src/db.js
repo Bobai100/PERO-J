@@ -106,19 +106,32 @@ export const db = {
   },
 
   /**
-   * Return up to 100 events where the given address appears in the description
+   * Return paginated events where the given address appears in the description
    * or raw_topics (case-insensitive substring match).
    *
    * @param {string} address - Stellar address (Strkey, G… or C…)
-   * @returns {Promise<DecodedEvent[]>}
+   * @param {object} [opts]
+   * @param {number} [opts.page=1]  - 1-based page number.
+   * @param {number} [opts.limit=25] - Rows per page.
+   * @returns {Promise<{ events: DecodedEvent[], total: number, page: number, limit: number }>}
    */
-  async getWalletEvents(address) {
-    // Match address appearing anywhere in description or raw_topics
-    const { rows } = await pool.query(
-      "SELECT * FROM events WHERE description ILIKE $1 OR raw_topics::text ILIKE $1 ORDER BY ledger DESC LIMIT 100",
+  async getWalletEvents(address, { page = 1, limit = 25 } = {}) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 25;
+    const offset = (pageNum - 1) * limitNum;
+
+    const countRes = await pool.query(
+      "SELECT COUNT(*) FROM events WHERE description ILIKE $1 OR raw_topics::text ILIKE $1",
       [`%${address}%`]
     );
-    return rows;
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    const { rows } = await pool.query(
+      "SELECT * FROM events WHERE description ILIKE $1 OR raw_topics::text ILIKE $1 ORDER BY ledger DESC LIMIT $2 OFFSET $3",
+      [`%${address}%`, limitNum, offset]
+    );
+
+    return { events: rows, total, page: pageNum, limit: limitNum };
   },
 
   /**

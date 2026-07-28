@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { StrKey } from "@stellar/stellar-sdk";
@@ -7,14 +8,19 @@ import Skeleton from "../components/Skeleton";
 
 export default function WalletPage() {
   const { address = "" } = useParams();
+  const [page, setPage] = useState(1);
 
   const isValidAddress = StrKey.isValidEd25519PublicKey(address);
 
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["wallet", address],
-    queryFn: () => api.wallet(address),
+  const { data, isLoading } = useQuery({
+    queryKey: ["wallet", address, page],
+    queryFn: () => api.wallet(address, page),
     enabled: !!address && isValidAddress,
   });
+
+  const events = data?.events ?? [];
+  const total = data?.total ?? 0;
+  const limit = data?.limit ?? 25;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -32,6 +38,15 @@ export default function WalletPage() {
           ? <Skeleton />
           : <EventTable events={events} />}
       </div>
+
+      {/* Pagination */}
+      {isValidAddress && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
+          <span style={{ padding: "6px 10px", color: "var(--muted)" }}>Page {page}</span>
+          <button disabled={page * limit >= total || events.length < limit} onClick={() => setPage(p => p + 1)}>Next →</button>
+        </div>
+      )}
     </div>
   );
 }
