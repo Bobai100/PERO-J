@@ -65,10 +65,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
-  events: (params: { contract?: string; fn?: string; page?: number }) => {
+  events: (params: { contract?: string; fn?: string; q?: string; page?: number }) => {
     const q = new URLSearchParams();
     if (params.contract) q.set("contract", params.contract);
     if (params.fn)       q.set("fn", params.fn);
+    if (params.q)        q.set("q", params.q);
     if (params.page)     q.set("page", String(params.page));
     return get<EventsResponse>(`/events?${q}`);
   },

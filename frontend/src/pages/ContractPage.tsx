@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
 import Skeleton from "../components/Skeleton";

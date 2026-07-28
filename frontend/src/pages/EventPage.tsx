@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api";
 import Skeleton from "../components/Skeleton";
 import CopyButton from "../components/CopyButton";
@@ -11,6 +12,14 @@ export default function EventPage() {
     queryKey: ["event", seq],
     queryFn: () => api.event(Number(seq)),
   });
+
+  useEffect(() => {
+    if (ev) {
+      document.title = `Event #${ev.seq} - Soroban Smart Block Explorer`;
+    } else {
+      document.title = "Soroban Smart Block Explorer";
+    }
+  }, [ev]);
 
   if (isLoading) return <div className="card"><Skeleton rows={4} /></div>;
   if (!ev) return <p>Event not found.</p>;

@@ -170,6 +170,7 @@ export const db = {
    * @param {object}  [opts]
    * @param {string}  [opts.contract]  - Filter by contract_id (exact match).
    * @param {string}  [opts.fn]        - Filter by function name (exact match).
+   * @param {string}  [opts.q]         - Full-text search in description field.
    * @param {number}  [opts.page=1]    - 1-based page number.
    * @param {number}  [opts.limit=25]  - Rows per page.
    * @returns {Promise<{ events: DecodedEvent[], total: number, page: number, limit: number }>}
@@ -186,6 +187,10 @@ export const db = {
     if (fn) {
       params.push(fn);
       conditions.push(`function = $${params.length}`);
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      conditions.push(`description ILIKE $${params.length}`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const countParams = [...params];

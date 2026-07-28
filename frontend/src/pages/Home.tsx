@@ -9,6 +9,7 @@ export default function Home() {
   const [fnFilter, setFnFilter] = useState("");
   const [customFn, setCustomFn] = useState("");
   const [useCustom, setUseCustom] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
   const { data: functions = [], isLoading: functionsLoading } = useQuery({
@@ -39,6 +40,11 @@ export default function Home() {
     setPage(1);
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
@@ -50,15 +56,20 @@ export default function Home() {
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 10, alignItems: "center", flex: "1 1 auto" }}>
+          <input
+            type="text"
+            placeholder="Search events by description…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ flex: "1 1 300px" }}
+          />
+        </form>
         <label style={{ color: "var(--muted)" }}>Filter by function:</label>
-        <select value={fnFilter} onChange={handleFunctionChange} disabled={functionsLoading}>
-          <option value="">All</option>
-          {functions.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
         <input
           type="text"
-          placeholder="Or type custom function name…"
-          value={useCustom ? customFn : ""}
+          placeholder="Function name…"
+          value={useCustom ? customFn : fnFilter}
           onChange={e => handleCustomFnChange(e.target.value)}
           style={{ flex: "0 1 200px" }}
         />
