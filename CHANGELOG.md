@@ -8,6 +8,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve issues [#70](../../issues/70), [#71](../../issues/71), [#72](../../issues/72), and [#73](../../issues/73) in indexer service ([`0a97e3f`](../../commit/0a97e3f9c87f346c2f7087c1caf641a39a47245a))
+
+Detailed Summary of Changes:
+
+  1. Fix Express Async Route Error Handling ([#73](../../issues/73)):
+  - Introduced an asyncHandler wrapper function in indexer/src/api.js to catch promise rejections in async route handlers and forward them to Express's next(err).
+  - Added a centralized Express error-handling middleware to safely return 500 error responses and prevent process crashes.
+  - Refactored all API route callbacks to use asyncHandler.
+
+  2. Graceful Database Connection Pool Termination on Unhandled Rejections ([#72](../../issues/72)):
+  - Registered process.on('unhandledRejection') in indexer/src/db.js to log errors and await pool.end() before process exit, preventing PostgreSQL connection leaks.
+  - Added db.close() method for graceful shutdown.
+
+  3. Persist and Query SAC Asset Codes in Events Table ([#71](../../issues/71)):
+  - Added sac_asset TEXT column to events table in db.init() with migration support.
+  - Updated db.upsertEvent() to persist sac_asset when Stellar Asset Contract (SAC) events are processed.
+
+  4. Add Container Health and Readiness Probes ([#70](../../issues/70)):
+  - Implemented db.ping() in indexer/src/db.js to verify database connectivity.
+  - Enhanced GET /health endpoint to check database status, include latestLedger, and return HTTP 503 on database disconnection or indexer lag.
+  - Added GET /ready endpoint for Kubernetes and Docker Compose readiness probes.
+
+  Closes [#70](../../issues/70)
+  Closes [#71](../../issues/71)
+  Closes [#72](../../issues/72)
+  Closes [#73](../../issues/73)
+
+
 - Resolve issues [#69](../../issues/69), [#68](../../issues/68), [#67](../../issues/67), and [#66](../../issues/66) simultaneously ([`fbff2bc`](../../commit/fbff2bcd27f3fbe11b8d379348684b4691835407))
 
 1. Issue [#69](../../issues/69) - Add pagination to getWalletEvents & WalletPage:
@@ -88,6 +116,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`6cd5c41`](../../commit/6cd5c41f21f1399094420f1a03251b7924386e62))
 
 - Auto-update CHANGELOG.md [skip ci] ([`90304fb`](../../commit/90304fb2a734e9e4f64660d636d42f6a79576cdb))
 
