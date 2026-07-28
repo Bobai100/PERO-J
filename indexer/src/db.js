@@ -287,8 +287,8 @@ export const db = {
 
   /**
    * Insert or update ABI metadata for a contract.
-   * On conflict (same id) updates name, description, and functions only —
-   * registered_by and created_at are preserved.
+   * On conflict (same id) updates name, description, functions, and registered_by.
+   * created_at is preserved.
    *
    * @param {ContractMeta} meta
    * @returns {Promise<void>}
@@ -297,7 +297,7 @@ export const db = {
     await pool.query(
       `INSERT INTO contracts (id, name, description, functions, registered_by)
        VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, functions=$4`,
+       ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, functions=$4, registered_by=$5`,
       [meta.id, meta.name, meta.description, JSON.stringify(meta.functions), meta.registered_by]
     );
   },
@@ -307,9 +307,7 @@ export const db = {
    * @returns {Promise<number|null>} The last successfully indexed ledger, or null.
    */
   async getCursor() {
-    const { rows } = await pool.query(
-      "SELECT value FROM indexer_state WHERE key = 'last_ledger'"
-    );
+    const { rows } = await pool.query("SELECT value FROM indexer_state WHERE key = 'last_ledger'");
     return rows.length ? Number(rows[0].value) : null;
   },
 
