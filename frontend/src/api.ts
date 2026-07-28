@@ -54,6 +54,7 @@ export const api = {
     if (params.page)     q.set("page", String(params.page));
     return get<DecodedEvent[]>(`/events?${q}`);
   },
+  distinctFunctions: () => get<string[]>(`/events?distinct=function`),
   event:            (seq: number)        => get<DecodedEvent>(`/events/${seq}`),
   contract:         (id: string)         => get<ContractMeta>(`/contracts/${id}`),
   wallet:           (address: string)    => get<DecodedEvent[]>(`/wallet/${address}`),
