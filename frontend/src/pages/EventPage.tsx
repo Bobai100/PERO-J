@@ -15,6 +15,8 @@ export default function EventPage() {
   if (isLoading) return <div className="card"><Skeleton rows={4} /></div>;
   if (!ev) return <p>Event not found.</p>;
 
+  const topics = ev.raw_topics ?? [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <h2>Event #{ev.seq}</h2>
