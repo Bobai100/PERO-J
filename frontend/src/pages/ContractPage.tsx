@@ -42,6 +42,16 @@ export default function ContractPage() {
           <code style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all", flex: 1 }}>{id}</code>
           <CopyButton value={id} size="small" />
         </div>
+        {meta.registered_by && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+            Registered by <code style={{ fontFamily: "monospace" }}>{meta.registered_by}</code>
+          </div>
+        )}
+        {meta.created_at && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+            Created on {new Date(meta.created_at).toUTCString()}
+          </div>
+        )}
 
         {meta.functions.length > 0 && (
           <div style={{ marginTop: 16 }}>

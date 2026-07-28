@@ -17,6 +17,8 @@ export interface ContractMeta {
   name: string;
   description: string;
   functions: { name: string; description: string }[];
+  registered_by?: string;
+  created_at?: string;
 }
 
 async function get<T>(path: string): Promise<T> {
