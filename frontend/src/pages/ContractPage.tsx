@@ -17,7 +17,7 @@ export default function ContractPage() {
   const { data: events = [], isLoading: evLoading } = useQuery({
     queryKey: ["events", id],
     queryFn: () => api.events({ contract: id }),
-    enabled: !!id,
+    enabled: !!id && !!meta,
   });
 
   // Invalidate contract cache after a successful registration so the page

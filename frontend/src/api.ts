@@ -18,6 +18,13 @@ export interface ContractMeta {
   functions: { name: string; description: string }[];
 }
 
+export interface WalletEventsResponse {
+  events: DecodedEvent[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 async function get<T>(path: string): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -54,9 +61,8 @@ export const api = {
     if (params.page)     q.set("page", String(params.page));
     return get<DecodedEvent[]>(`/events?${q}`);
   },
-  distinctFunctions: () => get<string[]>(`/events?distinct=function`),
-  event:            (seq: number)        => get<DecodedEvent>(`/events/${seq}`),
-  contract:         (id: string)         => get<ContractMeta>(`/contracts/${id}`),
-  wallet:           (address: string)    => get<DecodedEvent[]>(`/wallet/${address}`),
-  registerContract: (meta: ContractMeta) => post<{ ok: boolean }>("/contracts", meta),
+  event:            (seq: number)                         => get<DecodedEvent>(`/events/${seq}`),
+  contract:         (id: string)                          => get<ContractMeta>(`/contracts/${id}`),
+  wallet:           (address: string, page: number = 1)   => get<WalletEventsResponse>(`/wallet/${address}?page=${page}`),
+  registerContract: (meta: ContractMeta)                  => post<{ ok: boolean }>("/contracts", meta),
 };
