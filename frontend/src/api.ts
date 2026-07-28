@@ -10,6 +10,7 @@ export interface DecodedEvent {
   tx_hash?: string;
   created_at?: string;
   sac_asset?: string;
+  onchain_seq?: number | null;
 }
 
 export interface ContractMeta {
@@ -22,6 +23,13 @@ export interface ContractMeta {
 }
 
 export interface WalletEventsResponse {
+  events: DecodedEvent[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface EventsResponse {
   events: DecodedEvent[];
   total: number;
   page: number;
@@ -63,7 +71,7 @@ export const api = {
     if (params.fn)       q.set("fn", params.fn);
     if (params.q)        q.set("q", params.q);
     if (params.page)     q.set("page", String(params.page));
-    return get<DecodedEvent[]>(`/events?${q}`);
+    return get<EventsResponse>(`/events?${q}`);
   },
   event:            (seq: number)                         => get<DecodedEvent>(`/events/${seq}`),
   contract:         (id: string)                          => get<ContractMeta>(`/contracts/${id}`),

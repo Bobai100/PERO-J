@@ -54,8 +54,12 @@
  * @property {string}      description  - Human-readable sentence describing the event.
  * @property {string[]}    raw_topics   - All decoded topics serialised to strings.
  * @property {string}      raw_data     - JSON.stringify of the decoded event data ScVal.
+ * @property {string[]}    [event_addresses] - G… addresses extracted from the decoded description
+ *                                              for fast wallet-event lookups.
  * @property {string}      [sac_asset]  - Classic asset code (e.g. "USDC") when the contract
  *                                        is a Stellar Asset Contract (SAC). Omitted otherwise.
+ * @property {number|null} [onchain_seq] - On-chain EventSeq value when submitted successfully.
+ *                                         DB seq remains the canonical REST/frontend identifier.
  */
 
 // ─── Health state ─────────────────────────────────────────────────────────────

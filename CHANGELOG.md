@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
+
 - Resolve issues [#70](../../issues/70), [#71](../../issues/71), [#72](../../issues/72), and [#73](../../issues/73) in indexer service ([`0a97e3f`](../../commit/0a97e3f9c87f346c2f7087c1caf641a39a47245a))
 
 Detailed Summary of Changes:
@@ -116,6 +118,16 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`a951154`](../../commit/a95115440341111dd1c03dec58e94b8a7f810566))
+
+- Auto-update CHANGELOG.md [skip ci] ([`fe6b590`](../../commit/fe6b590e8af9352bdec58a86ed65e447b403abbb))
+
+- Auto-update CHANGELOG.md [skip ci] ([`cbaa3b9`](../../commit/cbaa3b99d8819537d2b1eec0794c4853e1726690))
+
+- Auto-update CHANGELOG.md [skip ci] ([`07fedca`](../../commit/07fedca8254be28b38f5dd745581b05a02e4a2e4))
+
+- Auto-update CHANGELOG.md [skip ci] ([`174d064`](../../commit/174d0645d2f1d14d56d3bf38fe6bde255e41520c))
 
 - Auto-update CHANGELOG.md [skip ci] ([`c72538b`](../../commit/c72538b09a9fcef2c86c50026af99e3d6705245d))
 

@@ -46,7 +46,9 @@ export function startApi() {
           uptime_seconds: uptimeSeconds,
           lag_seconds: lagSeconds,
           last_ledger: health.lastLedger,
-          last_indexed_at: health.lastIndexedAt ? new Date(health.lastIndexedAt).toISOString() : null,
+          last_indexed_at: health.lastIndexedAt
+            ? new Date(health.lastIndexedAt).toISOString()
+            : null,
         });
       }
 
@@ -83,13 +85,13 @@ export function startApi() {
   app.get(
     "/api/events",
     asyncHandler(async (req, res) => {
-      const events = await db.getEvents({
+      const result = await db.getEvents({
         contract: req.query.contract,
         fn: req.query.fn,
         q: req.query.q,
         page: Number(req.query.page) || 1,
       });
-      res.json(events);
+      res.json(result);
     })
   );
 
@@ -161,9 +163,16 @@ export function startApi() {
     })
   );
 
+  app.use((req, res) => {
+    res.status(404).json({ error: "Not found" });
+  });
+
   // Global Error Handler Middleware
   app.use((err, req, res, _next) => {
     console.error("API Error:", err);
+    if (res.headersSent) {
+      return;
+    }
     res.status(500).json({ error: err.message || "Internal Server Error" });
   });
 

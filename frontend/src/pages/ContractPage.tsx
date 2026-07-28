@@ -16,19 +16,12 @@ export default function ContractPage() {
     enabled: !!id,
   });
 
-  useEffect(() => {
-    if (meta?.name) {
-      document.title = `${meta.name} - Soroban Smart Block Explorer`;
-    } else {
-      document.title = "Soroban Smart Block Explorer";
-    }
-  }, [meta]);
-
-  const { data: events = [], isLoading: evLoading } = useQuery({
+  const { data: eventsData, isLoading: evLoading } = useQuery({
     queryKey: ["events", id],
     queryFn: () => api.events({ contract: id }),
     enabled: !!id && !!meta,
   });
+  const events = eventsData?.events ?? [];
 
   // Invalidate contract cache after a successful registration so the page
   // reflects the new metadata immediately without waiting for staleTime to expire.

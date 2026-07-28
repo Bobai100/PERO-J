@@ -48,21 +48,42 @@ async function indexLedger(ledger) {
   return res.latestLedger;
 }
 
+let shuttingDown = false;
+
+function gracefulShutdown() {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log("Shutdown signal received, finishing current iteration…");
+}
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
+
 async function run() {
   await db.init();
   startApi();
 
-  let cursor = START_LEDGER || (await rpc.getLatestLedger()).sequence - 100;
+  const persisted = await db.getCursor();
+  let cursor = persisted ?? (START_LEDGER || (await rpc.getLatestLedger()).sequence - 100);
+  if (persisted !== null) {
+    console.log(`Resuming from persisted ledger ${cursor}`);
+  }
 
-  while (true) {
+  while (!shuttingDown) {
     try {
       const latest = await indexLedger(cursor);
       cursor = latest + 1;
+      await db.setCursor(latest);
     } catch (err) {
       console.error("Indexer error:", err.message);
     }
     await new Promise((r) => setTimeout(r, POLL_MS));
   }
+
+  await db.close();
+  process.exit(0);
 }
 
 run();
