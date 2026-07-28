@@ -6,6 +6,16 @@ import pg from "pg";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
+process.on("unhandledRejection", async (err) => {
+  console.error("Unhandled Rejection detected, closing database pool:", err);
+  try {
+    await pool.end();
+  } catch (e) {
+    console.error("Error closing database pool:", e);
+  }
+  process.exit(1);
+});
+
 export const db = {
   /** Create tables and indexes if they do not already exist.
    * @returns {Promise<void>}
@@ -21,8 +31,10 @@ export const db = {
         description TEXT NOT NULL,
         raw_topics  JSONB,
         raw_data    TEXT,
+        sac_asset   TEXT,
         created_at  TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS sac_asset TEXT;
       CREATE INDEX IF NOT EXISTS idx_events_contract ON events(contract_id);
       CREATE INDEX IF NOT EXISTS idx_events_function ON events(function);
       CREATE INDEX IF NOT EXISTS idx_events_ledger   ON events(ledger);
@@ -39,6 +51,27 @@ export const db = {
   },
 
   /**
+   * Check if database is reachable.
+   * @returns {Promise<boolean>}
+   */
+  async ping() {
+    try {
+      await pool.query("SELECT 1");
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Gracefully close the database connection pool.
+   * @returns {Promise<void>}
+   */
+  async close() {
+    await pool.end();
+  },
+
+  /**
    * Persist a decoded event to the database.
    * Uses ON CONFLICT DO NOTHING so duplicate events (e.g. from an indexer
    * restart) are silently skipped.
@@ -48,8 +81,8 @@ export const db = {
    */
   async upsertEvent(ev) {
     await pool.query(
-      `INSERT INTO events (contract_id, function, ledger, tx_hash, description, raw_topics, raw_data)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+      `INSERT INTO events (contract_id, function, ledger, tx_hash, description, raw_topics, raw_data, sac_asset)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        ON CONFLICT DO NOTHING`,
       [
         ev.contract_id,
@@ -59,6 +92,7 @@ export const db = {
         ev.description,
         JSON.stringify(ev.raw_topics),
         ev.raw_data,
+        ev.sac_asset ?? null,
       ]
     );
   },
