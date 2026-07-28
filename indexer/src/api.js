@@ -79,13 +79,14 @@ export function startApi() {
     })
   );
 
-  // GET /api/events?contract=&fn=&page=
+  // GET /api/events?contract=&fn=&page=&q=
   app.get(
     "/api/events",
     asyncHandler(async (req, res) => {
       const events = await db.getEvents({
         contract: req.query.contract,
         fn: req.query.fn,
+        q: req.query.q,
         page: Number(req.query.page) || 1,
       });
       res.json(events);

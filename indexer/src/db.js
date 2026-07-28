@@ -103,11 +103,12 @@ export const db = {
    * @param {object}  [opts]
    * @param {string}  [opts.contract]  - Filter by contract_id (exact match).
    * @param {string}  [opts.fn]        - Filter by function name (exact match).
+   * @param {string}  [opts.q]         - Full-text search in description field.
    * @param {number}  [opts.page=1]    - 1-based page number.
    * @param {number}  [opts.limit=25]  - Rows per page.
    * @returns {Promise<DecodedEvent[]>}
    */
-  async getEvents({ contract, fn, page = 1, limit = 25 } = {}) {
+  async getEvents({ contract, fn, q, page = 1, limit = 25 } = {}) {
     const conditions = [];
     const params = [];
     if (contract) {
@@ -117,6 +118,10 @@ export const db = {
     if (fn) {
       params.push(fn);
       conditions.push(`function = $${params.length}`);
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      conditions.push(`description ILIKE $${params.length}`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const offset = (page - 1) * limit;

@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
 import Skeleton from "../components/Skeleton";
@@ -14,6 +15,14 @@ export default function ContractPage() {
     queryFn: () => api.contract(id),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (meta?.name) {
+      document.title = `${meta.name} - Soroban Smart Block Explorer`;
+    } else {
+      document.title = "Soroban Smart Block Explorer";
+    }
+  }, [meta]);
 
   const { data: events = [], isLoading: evLoading } = useQuery({
     queryKey: ["events", id],

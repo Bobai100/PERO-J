@@ -69,3 +69,31 @@ button:hover { opacity: 0.85; }
 }
 .badge.green { background: #1a3a22; color: var(--green); }
 .badge.yellow { background: #3a2e0a; color: var(--yellow); }
+
+/* Mobile responsive styles */
+@media (max-width: 600px) {
+  body { font-size: 13px; }
+  
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  
+  button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .card {
+    padding: 12px;
+  }
+  
+  /* Hide secondary table columns on mobile */
+  table th:nth-child(1),
+  table td:nth-child(1),
+  table th:nth-child(2),
+  table td:nth-child(2) {
+    display: none;
+  }
+}
