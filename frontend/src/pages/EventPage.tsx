@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import Skeleton from "../components/Skeleton";
+import CopyButton from "../components/CopyButton";
 
 export default function EventPage() {
   const { seq = "0" } = useParams();
@@ -25,35 +26,39 @@ export default function EventPage() {
         <Row label="Function"    value={ev.function} badge />
         <Row label="Ledger"      value={ev.ledger.toLocaleString()} />
         {ev.created_at && <Row label="Time" value={new Date(ev.created_at).toUTCString()} />}
-        <Row label="Contract"    value={<Link to={`/contract/${ev.contract_id}`}>{ev.contract_id}</Link>} />
-        {ev.tx_hash && <Row label="Tx Hash" value={ev.tx_hash} mono />}
-        {topics.length > 0 && (
-          <Row label="Topics" value={topics.join(", ")} mono />
+        <Row label="Contract" value={<Link to={`/contract/${ev.contract_id}`}>{ev.contract_id}</Link>} action={<CopyButton value={ev.contract_id} size="small" />} />
+        {ev.tx_hash && <Row label="Tx Hash" value={ev.tx_hash} mono action={<CopyButton value={ev.tx_hash} size="small" />} />}
+        {ev.raw_topics.length > 0 && (
+          <Row label="Topics" value={ev.raw_topics.join(", ")} mono />
         )}
       </div>
     </div>
   );
 }
 
-function Row({ label, value, highlight, badge, mono }: {
+function Row({ label, value, highlight, badge, mono, action }: {
   label: string;
   value: React.ReactNode;
   highlight?: boolean;
   badge?: boolean;
   mono?: boolean;
+  action?: React.ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-      <span style={{ color: "var(--muted)", minWidth: 100 }}>{label}</span>
-      {badge
-        ? <span className="badge green">{value}</span>
-        : <span style={{
-            fontWeight: highlight ? 600 : 400,
-            fontFamily: mono ? "monospace" : undefined,
-            fontSize: mono ? 12 : undefined,
-            wordBreak: "break-all",
-          }}>{value}</span>
-      }
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flex: 1 }}>
+        <span style={{ color: "var(--muted)", minWidth: 100 }}>{label}</span>
+        {badge
+          ? <span className="badge green">{value}</span>
+          : <span style={{
+              fontWeight: highlight ? 600 : 400,
+              fontFamily: mono ? "monospace" : undefined,
+              fontSize: mono ? 12 : undefined,
+              wordBreak: "break-all",
+            }}>{value}</span>
+        }
+      </div>
+      {action && <div style={{ whiteSpace: "nowrap" }}>{action}</div>}
     </div>
   );
 }

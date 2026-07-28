@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
 import Skeleton from "../components/Skeleton";
+import CopyButton from "../components/CopyButton";
 
 export default function ContractPage() {
   const { id = "" } = useParams();
@@ -37,7 +38,20 @@ export default function ContractPage() {
       <div className="card">
         <h2 style={{ marginBottom: 8 }}>{meta.name}</h2>
         <p style={{ color: "var(--muted)", marginBottom: 12 }}>{meta.description}</p>
-        <code style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>{id}</code>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+          <code style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all", flex: 1 }}>{id}</code>
+          <CopyButton value={id} size="small" />
+        </div>
+        {meta.registered_by && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+            Registered by <code style={{ fontFamily: "monospace" }}>{meta.registered_by}</code>
+          </div>
+        )}
+        {meta.created_at && (
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+            Created on {new Date(meta.created_at).toUTCString()}
+          </div>
+        )}
 
         {meta.functions.length > 0 && (
           <div style={{ marginTop: 16 }}>

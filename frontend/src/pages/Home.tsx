@@ -5,38 +5,34 @@ import { api } from "../api";
 import EventTable from "../components/EventTable";
 import Skeleton from "../components/Skeleton";
 
-const FUNCTIONS = ["", "swap", "transfer", "mint", "burn", "stake", "unstake"];
-
 export default function Home() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [fnFilter, setFnFilter] = useState(searchParams.get("fn") || "");
-  const [contractFilter, setContractFilter] = useState(searchParams.get("contract") || "");
+  const [fnFilter, setFnFilter] = useState("");
+  const [customFn, setCustomFn] = useState("");
+  const [useCustom, setUseCustom] = useState(false);
   const [page, setPage] = useState(1);
 
-  // Update URL when filters change
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (fnFilter) params.set("fn", fnFilter);
-    if (contractFilter) params.set("contract", contractFilter);
-    setSearchParams(params, { replace: true });
-  }, [fnFilter, contractFilter, setSearchParams]);
-
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events", fnFilter, contractFilter, page],
-    queryFn: () => api.events({ 
-      fn: fnFilter || undefined, 
-      contract: contractFilter || undefined,
-      page 
-    }),
+  const { data: functions = [], isLoading: functionsLoading } = useQuery({
+    queryKey: ["distinctFunctions"],
+    queryFn: () => api.distinctFunctions(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const handleFilterChange = (fn: string) => {
-    setFnFilter(fn);
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["events", fnFilter, customFn, page],
+    queryFn: () => api.events({ fn: useCustom ? customFn : fnFilter || undefined, page }),
+  });
+
+  const handleFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFnFilter(value);
+    setUseCustom(false);
+    setCustomFn("");
     setPage(1);
   };
 
-  const handleContractFilterChange = (contract: string) => {
-    setContractFilter(contract);
+  const handleCustomFnChange = (value: string) => {
+    setCustomFn(value);
+    setUseCustom(true);
     setPage(1);
   };
 
@@ -52,22 +48,17 @@ export default function Home() {
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <label style={{ color: "var(--muted)" }}>Filter by function:</label>
-        <select value={fnFilter} onChange={e => handleFilterChange(e.target.value)}>
-          {FUNCTIONS.map(f => <option key={f} value={f}>{f || "All"}</option>)}
+        <select value={fnFilter} onChange={handleFunctionChange} disabled={functionsLoading}>
+          <option value="">All</option>
+          {functions.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
-        {contractFilter && (
-          <>
-            <span style={{ color: "var(--muted)" }}>|</span>
-            <span style={{ color: "var(--muted)" }}>Contract:</span>
-            <code style={{ fontSize: 12, color: "var(--text)" }}>{contractFilter.slice(0, 8)}…</code>
-            <button 
-              onClick={() => handleContractFilterChange("")}
-              style={{ padding: "4px 8px", fontSize: 12 }}
-            >
-              Clear
-            </button>
-          </>
-        )}
+        <input
+          type="text"
+          placeholder="Or type custom function name…"
+          value={useCustom ? customFn : ""}
+          onChange={e => handleCustomFnChange(e.target.value)}
+          style={{ flex: "0 1 200px" }}
+        />
       </div>
 
       <div className="card">
