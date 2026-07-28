@@ -8,6 +8,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve issues [#69](../../issues/69), [#68](../../issues/68), [#67](../../issues/67), and [#66](../../issues/66) simultaneously ([`fbff2bc`](../../commit/fbff2bcd27f3fbe11b8d379348684b4691835407))
+
+1. Issue [#69](../../issues/69) - Add pagination to getWalletEvents & WalletPage:
+  - Updated db.getWalletEvents to accept page and limit parameters, query total event count, and fetch paginated results using LIMIT and OFFSET in SQL.
+  - Updated GET /api/wallet/:address endpoint to pass query parameters (page and limit) to db.getWalletEvents and return a wrapper object containing { events, total, page, limit }.
+  - Updated frontend api.ts and WalletPage.tsx to pass page parameter to api.wallet and render Prev/Next pagination UI controls.
+
+  2. Issue [#68](../../issues/68) - Handle sourceAccountNotFound in sep41Metadata simulation:
+  - Updated simulateCall in sep41Metadata.js to catch sourceAccountNotFound simulation errors when sequence is "0" and automatically retry simulation with sequence "1".
+  - Added JSDoc documentation and environment variable fallback (process.env.OPERATIONAL_ACCOUNT) for the simulation dummy source account.
+
+  3. Issue [#67](../../issues/67) - Implement express-rate-limit middleware on Express API:
+  - Added express-rate-limit package dependency to indexer/package.json.
+  - Configured and registered rateLimit middleware in indexer/src/api.js (windowMs: 60,000 ms, max: 100 requests) to protect all API endpoints against DoS attacks.
+
+  4. Issue [#66](../../issues/66) - Validate seq parameter in GET /api/events/:seq:
+  - Added validation for req.params.seq in GET /api/events/:seq to ensure it is a non-negative integer using parseInt and regex pattern matching.
+  - Returned HTTP 400 with { error: "seq must be a non-negative integer" } when given invalid inputs like non-numeric strings or negative numbers.
+
+  Closes [#69](../../issues/69)
+  Closes [#68](../../issues/68)
+  Closes [#67](../../issues/67)
+  Closes [#66](../../issues/66)
+
+
 - Resolve frontend issues [#90](../../issues/90) [#91](../../issues/91) [#92](../../issues/92) [#93](../../issues/93) ([`5da7959`](../../commit/5da79592839c0627076ad979a3c751add9bbf36c))
 
 [#90](../../issues/90) - Add Skeleton component with shimmer animation; replace all plain
@@ -63,6 +88,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`64c2488`](../../commit/64c2488417fa0d6f93df6d6dc8b500cab5b767db))
 
 - Auto-update CHANGELOG.md [skip ci] ([`193eeee`](../../commit/193eeee984e6e2cf5193124884bae892d6d428d9))
 
