@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import EventTable from "../components/EventTable";
 import Skeleton from "../components/Skeleton";
+import CopyButton from "../components/CopyButton";
 
 export default function ContractPage() {
   const { id = "" } = useParams();
@@ -37,7 +38,10 @@ export default function ContractPage() {
       <div className="card">
         <h2 style={{ marginBottom: 8 }}>{meta.name}</h2>
         <p style={{ color: "var(--muted)", marginBottom: 12 }}>{meta.description}</p>
-        <code style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>{id}</code>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+          <code style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all", flex: 1 }}>{id}</code>
+          <CopyButton value={id} size="small" />
+        </div>
 
         {meta.functions.length > 0 && (
           <div style={{ marginTop: 16 }}>
