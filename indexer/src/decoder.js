@@ -50,6 +50,8 @@ export async function decode(ev) {
     ? buildDescription(fnName, topics.slice(1), data, contractLabel)
     : genericDescription(fnName, topics.slice(1), data, contractLabel);
 
+  const eventAddresses = extractAddresses([...topics.slice(1), data]);
+
   return {
     contract_id: contractId,
     function: fnName,
@@ -58,6 +60,7 @@ export async function decode(ev) {
     description,
     raw_topics: topics.map(String),
     raw_data: JSON.stringify(data),
+    event_addresses: eventAddresses,
     ...(isSac && { sac_asset: assetCode }),
   };
 }
@@ -106,6 +109,27 @@ function buildDescription(fn, args, data, contractName) {
 function genericDescription(fn, args, data, contractId) {
   const argStr = args.map(String).join(", ");
   return `${fn}(${argStr}) called on ${contractId}`;
+}
+
+/**
+ * Walk through decoded values and collect all G… Stellar public addresses.
+ *
+ * @param {unknown[]} values - Decoded topic/data values from an event.
+ * @returns {string[]} Deduplicated list of G… addresses found.
+ */
+function extractAddresses(values) {
+  const found = new Set();
+  const walk = (v) => {
+    if (typeof v === "string" && /^G[A-Z0-9]{55}$/.test(v)) {
+      found.add(v);
+    } else if (Array.isArray(v)) {
+      v.forEach(walk);
+    } else if (v && typeof v === "object") {
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(values);
+  return [...found];
 }
 
 function fmt(addr) {
