@@ -89,6 +89,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`b0178f9`](../../commit/b0178f92e59be41908343c246fa84d333f4f7987))
+
 - Auto-update CHANGELOG.md [skip ci] ([`2f01e74`](../../commit/2f01e7440fb80286f823cee453cfe22aeb4e6553))
 
 - Auto-update CHANGELOG.md [skip ci] ([`64c2488`](../../commit/64c2488417fa0d6f93df6d6dc8b500cab5b767db))
@@ -103,6 +105,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add CI pipeline, Docker Compose infrastructure, and frontend containerization ([`99a233a`](../../commit/99a233a5e5a70cf17f53f05e8a956393bf6b048c))
 
 - Add CHANGELOG, JSDoc types, Node version enforcement, and linting ([`b47f6dd`](../../commit/b47f6dd58d2b4e6997f1e52781c3ac4ebad33ccc))
 
