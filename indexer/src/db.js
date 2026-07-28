@@ -4,7 +4,12 @@ import pg from "pg";
 /** @typedef {import('./types.js').ContractMeta} ContractMeta */
 /** @typedef {import('./types.js').VolumeResult} VolumeResult */
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 const MIGRATION_LOCK_ID = 57_056;
 
 const migrations = [
@@ -175,7 +180,7 @@ export const db = {
    * @param {number}  [opts.limit=25]  - Rows per page.
    * @returns {Promise<{ events: DecodedEvent[], total: number, page: number, limit: number }>}
    */
-  async getEvents({ contract, fn, page = 1, limit = 25 } = {}) {
+  async getEvents({ contract, fn, q, page = 1, limit = 25 } = {}) {
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 25;
     const conditions = [];
@@ -272,6 +277,8 @@ export const db = {
        FROM events
        WHERE contract_id = $1
          AND function    = 'transfer'
+         AND raw_data IS NOT NULL
+         AND raw_data LIKE '{%'
          AND created_at >= NOW() - INTERVAL '24 hours'`,
       [contractId]
     );
@@ -307,9 +314,7 @@ export const db = {
    * @returns {Promise<number|null>} The last successfully indexed ledger, or null.
    */
   async getCursor() {
-    const { rows } = await pool.query(
-      "SELECT value FROM indexer_state WHERE key = 'last_ledger'"
-    );
+    const { rows } = await pool.query("SELECT value FROM indexer_state WHERE key = 'last_ledger'");
     return rows.length ? Number(rows[0].value) : null;
   },
 

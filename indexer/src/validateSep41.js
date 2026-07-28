@@ -24,6 +24,9 @@ import {
 const RPC_URL = process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET;
 const DUMMY_SOURCE = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+const MAX_CONCURRENT_CHECKS = 3;
+const MAX_RATE_LIMIT_RETRIES = 3;
+const RATE_LIMIT_RETRY_BASE_MS = 250;
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
@@ -61,6 +64,45 @@ function isExecutionError(msg) {
   return EXECUTION_ERROR_PATTERNS.some((p) => p.test(msg));
 }
 
+function isRateLimitError(err) {
+  const status = err?.status || err?.response?.status;
+  const msg = String(err?.message || err?.error || err || "");
+  return status === 429 || msg.includes("429") || /rate.?limit/i.test(msg);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRateLimitRetry(fn) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isRateLimitError(err) || attempt >= MAX_RATE_LIMIT_RETRIES) {
+        throw err;
+      }
+      await wait(RATE_LIMIT_RETRY_BASE_MS * 2 ** attempt);
+    }
+  }
+}
+
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
 async function functionExists(contract, fnName, args) {
   const account = new Account(DUMMY_SOURCE, "0");
   const tx = new TransactionBuilder(account, {
@@ -71,7 +113,7 @@ async function functionExists(contract, fnName, args) {
     .setTimeout(30)
     .build();
 
-  const result = await rpc.simulateTransaction(tx);
+  const result = await withRateLimitRetry(() => rpc.simulateTransaction(tx));
 
   if (!SorobanRpc.Api.isSimulationError(result)) {
     return true;
@@ -95,15 +137,13 @@ export async function validateSep41(contractId) {
   const contract = new Contract(contractId);
   const results = {};
 
-  await Promise.all(
-    SEP41_FUNCTIONS.map(async ({ name, args }) => {
-      try {
-        results[name] = await functionExists(contract, name, args);
-      } catch {
-        results[name] = false;
-      }
-    })
-  );
+  await mapWithConcurrency(SEP41_FUNCTIONS, MAX_CONCURRENT_CHECKS, async ({ name, args }) => {
+    try {
+      results[name] = await functionExists(contract, name, args);
+    } catch {
+      results[name] = false;
+    }
+  });
 
   const compliant = Object.values(results).every(Boolean);
   return { compliant, results };
