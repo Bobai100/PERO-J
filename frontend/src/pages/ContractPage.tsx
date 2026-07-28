@@ -15,11 +15,12 @@ export default function ContractPage() {
     enabled: !!id,
   });
 
-  const { data: events = [], isLoading: evLoading } = useQuery({
+  const { data: eventsData, isLoading: evLoading } = useQuery({
     queryKey: ["events", id],
     queryFn: () => api.events({ contract: id }),
     enabled: !!id && !!meta,
   });
+  const events = eventsData?.events ?? [];
 
   // Invalidate contract cache after a successful registration so the page
   // reflects the new metadata immediately without waiting for staleTime to expire.
