@@ -14,6 +14,8 @@ export default function EventPage() {
   if (isLoading) return <div className="card"><Skeleton rows={4} /></div>;
   if (!ev) return <p>Event not found.</p>;
 
+  const topics = ev.raw_topics ?? [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <h2>Event #{ev.seq}</h2>
@@ -25,8 +27,8 @@ export default function EventPage() {
         {ev.created_at && <Row label="Time" value={new Date(ev.created_at).toUTCString()} />}
         <Row label="Contract"    value={<Link to={`/contract/${ev.contract_id}`}>{ev.contract_id}</Link>} />
         {ev.tx_hash && <Row label="Tx Hash" value={ev.tx_hash} mono />}
-        {ev.raw_topics.length > 0 && (
-          <Row label="Topics" value={ev.raw_topics.join(", ")} mono />
+        {topics.length > 0 && (
+          <Row label="Topics" value={topics.join(", ")} mono />
         )}
       </div>
     </div>
