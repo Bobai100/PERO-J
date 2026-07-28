@@ -1,3 +1,4 @@
+import { LRUCache } from "lru-cache";
 import { scValToNative } from "@stellar/stellar-sdk";
 import { db } from "./db.js";
 import { detectSac } from "./sac.js";
@@ -5,6 +6,11 @@ import { detectSac } from "./sac.js";
 /** @typedef {import('./types.js').DecodedEvent} DecodedEvent */
 /** @typedef {import('./types.js').ContractMeta} ContractMeta */
 /** @typedef {import('./types.js').FunctionAbi} FunctionAbi */
+
+const contractMetaCache = new LRUCache({
+  max: 500,
+  ttl: 60_000,
+});
 
 /**
  * Decode a raw Soroban RPC event into a human-readable record.
@@ -27,8 +33,12 @@ export async function decode(ev) {
   const fnName =
     typeof topics[0] === "symbol" || typeof topics[0] === "string" ? String(topics[0]) : "unknown";
 
-  // Look up registered ABI for richer description
-  const meta = await db.getContractMeta(contractId).catch(() => null);
+  // Look up registered ABI for richer description (cached with 60s TTL)
+  let meta = contractMetaCache.get(contractId);
+  if (meta === undefined) {
+    meta = await db.getContractMeta(contractId).catch(() => null);
+    contractMetaCache.set(contractId, meta);
+  }
   const fnAbi = meta?.functions?.find((f) => f.name === fnName);
 
   const { isSac, assetCode } = detectSac(contractId);
