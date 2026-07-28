@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { DecodedEvent } from "../api";
 
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export default function EventTable({ events }: Props) {
+  const [expandedSeq, setExpandedSeq] = useState<number | null>(null);
   if (!events.length) {
     return (
       <div style={{ textAlign: "center", padding: "40px 20px" }}>
@@ -46,20 +48,51 @@ export default function EventTable({ events }: Props) {
           </tr>
         </thead>
         <tbody>
-          {events.map(ev => (
-            <tr key={ev.seq} style={{ borderBottom: "1px solid var(--border)" }}>
-              <td style={td}>
-                <Link to={`/event/${ev.seq}`}>#{ev.seq}</Link>
-              </td>
-              <td style={td}>{ev.ledger.toLocaleString()}</td>
-              <td style={td}>
-                <span className="badge">{ev.function}</span>
-              </td>
-              <td style={{ ...td, maxWidth: 480, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {ev.description}
-              </td>
-            </tr>
-          ))}
+          {events.map(ev => {
+            const isExpanded = expandedSeq === ev.seq;
+            const isLongDescription = ev.description.length > 60;
+            return (
+              <>
+                <tr key={`row-${ev.seq}`} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={td}>
+                    <Link to={`/event/${ev.seq}`}>#{ev.seq}</Link>
+                  </td>
+                  <td style={td}>{ev.ledger.toLocaleString()}</td>
+                  <td style={td}>
+                    <span className="badge">{ev.function}</span>
+                  </td>
+                  <td 
+                    style={{ 
+                      ...td, 
+                      maxWidth: isExpanded ? undefined : 480, 
+                      overflow: isExpanded ? "visible" : "hidden",
+                      textOverflow: isExpanded ? "clip" : "ellipsis",
+                      whiteSpace: isExpanded ? "normal" : "nowrap",
+                      wordBreak: isExpanded ? "break-word" : "normal",
+                      cursor: isLongDescription ? "pointer" : "default",
+                    }}
+                    title={ev.description}
+                    onClick={() => isLongDescription && setExpandedSeq(isExpanded ? null : ev.seq)}
+                  >
+                    {ev.description}
+                    {isLongDescription && !isExpanded && (
+                      <span style={{ marginLeft: 8, color: "var(--muted)", fontSize: 12 }}>…</span>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && isLongDescription && (
+                  <tr key={`expand-${ev.seq}`} style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--bg-secondary)" }}>
+                    <td colSpan={4} style={{ ...td, padding: 16 }}>
+                      <div style={{ color: "var(--muted)", fontSize: 12, marginBottom: 8 }}>Full description:</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
+                        {ev.description}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            );
+          })}
         </tbody>
       </table>
     </div>
