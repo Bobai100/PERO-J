@@ -41,6 +41,11 @@ export const db = {
       CREATE INDEX IF NOT EXISTS idx_events_ledger   ON events(ledger);
       CREATE INDEX IF NOT EXISTS idx_events_addresses ON events USING GIN(event_addresses);
 
+      CREATE TABLE IF NOT EXISTS indexer_state (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+
       CREATE TABLE IF NOT EXISTS contracts (
         id          TEXT PRIMARY KEY,
         name        TEXT NOT NULL,
@@ -223,6 +228,32 @@ export const db = {
        VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, functions=$4`,
       [meta.id, meta.name, meta.description, JSON.stringify(meta.functions), meta.registered_by]
+    );
+  },
+
+  /**
+   * Read the persisted indexer cursor from the indexer_state table.
+   * @returns {Promise<number|null>} The last successfully indexed ledger, or null.
+   */
+  async getCursor() {
+    const { rows } = await pool.query(
+      "SELECT value FROM indexer_state WHERE key = 'last_ledger'"
+    );
+    return rows.length ? Number(rows[0].value) : null;
+  },
+
+  /**
+   * Persist the indexer cursor so the process can resume from this ledger
+   * after a restart.
+   * @param {number} ledger
+   * @returns {Promise<void>}
+   */
+  async setCursor(ledger) {
+    await pool.query(
+      `INSERT INTO indexer_state (key, value)
+       VALUES ('last_ledger', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [String(ledger)]
     );
   },
 };
