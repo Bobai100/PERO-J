@@ -89,6 +89,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`2f01e74`](../../commit/2f01e7440fb80286f823cee453cfe22aeb4e6553))
+
 - Auto-update CHANGELOG.md [skip ci] ([`64c2488`](../../commit/64c2488417fa0d6f93df6d6dc8b500cab5b767db))
 
 - Auto-update CHANGELOG.md [skip ci] ([`193eeee`](../../commit/193eeee984e6e2cf5193124884bae892d6d428d9))
