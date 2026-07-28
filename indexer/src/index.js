@@ -48,13 +48,26 @@ async function indexLedger(ledger) {
   return res.latestLedger;
 }
 
+let shuttingDown = false;
+
+function gracefulShutdown() {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log("Shutdown signal received, finishing current iteration…");
+}
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
+
 async function run() {
   await db.init();
   startApi();
 
   let cursor = START_LEDGER || (await rpc.getLatestLedger()).sequence - 100;
 
-  while (true) {
+  while (!shuttingDown) {
     try {
       const latest = await indexLedger(cursor);
       cursor = latest + 1;
@@ -63,6 +76,9 @@ async function run() {
     }
     await new Promise((r) => setTimeout(r, POLL_MS));
   }
+
+  await db.close();
+  process.exit(0);
 }
 
 run();
