@@ -22,6 +22,17 @@ const DUMMY_SOURCE = process.env.OPERATIONAL_ACCOUNT || "GAAZI4TCR3TY5OJHCTJC2A4
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
+const contractCache = new Map();
+
+function getContract(contractId) {
+  if (!contractCache.has(contractId)) {
+    contractCache.set(contractId, new Contract(contractId));
+  }
+  return contractCache.get(contractId);
+}
+
+const dummyAccount = new Account(DUMMY_SOURCE, "0");
+
 /**
  * Simulate a no-arg contract call and return the native ScVal result.
  * @param {string} contractId
@@ -57,10 +68,11 @@ async function simulateCall(contractId, method, sequence = "0") {
  * @returns {Promise<{ name: string, symbol: string, decimals: number }>}
  */
 export async function fetchTokenMetadata(contractId) {
+  const contract = getContract(contractId);
   const [name, symbol, decimals] = await Promise.all([
-    simulateCall(contractId, "name"),
-    simulateCall(contractId, "symbol"),
-    simulateCall(contractId, "decimals"),
+    simulateCall(contract, "name"),
+    simulateCall(contract, "symbol"),
+    simulateCall(contract, "decimals"),
   ]);
 
   return {
