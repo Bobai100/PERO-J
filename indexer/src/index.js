@@ -52,12 +52,17 @@ async function run() {
   await db.init();
   startApi();
 
-  let cursor = START_LEDGER || (await rpc.getLatestLedger()).sequence - 100;
+  const persisted = await db.getCursor();
+  let cursor = persisted ?? (START_LEDGER || (await rpc.getLatestLedger()).sequence - 100);
+  if (persisted !== null) {
+    console.log(`Resuming from persisted ledger ${cursor}`);
+  }
 
   while (true) {
     try {
       const latest = await indexLedger(cursor);
       cursor = latest + 1;
+      await db.setCursor(latest);
     } catch (err) {
       console.error("Indexer error:", err.message);
     }
