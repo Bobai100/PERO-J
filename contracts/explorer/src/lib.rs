@@ -1,19 +1,32 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
+    contract, contracterror, contractimpl, contracttype, symbol_short,
     Address, Bytes, BytesN, Env, Map, String, Symbol, Vec,
     log, panic_with_error,
 };
 
 // ── Error codes ──────────────────────────────────────────────────────────────
-#[contracttype]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
-    NotFound      = 1,
-    Unauthorized  = 2,
-    AlreadyExists = 3,
+    NotFound       = 1,
+    Unauthorized   = 2,
+    AlreadyExists  = 3,
+    InvalidInput   = 4,
+    NotInitialized = 5,
 }
+
+// ── Input limits ─────────────────────────────────────────────────────────────
+// Bounds on caller-supplied payloads so a single call cannot bloat on-chain
+// storage (and the rent every user pays for it) without limit.
+
+/// Largest `raw_data` blob accepted by `submit_event`.
+pub const MAX_RAW_DATA_BYTES: u32 = 4096;
+/// Largest number of functions accepted in a `ContractMeta`.
+pub const MAX_FUNCTIONS: u32 = 64;
+/// Largest number of parameters accepted per function.
+pub const MAX_PARAMS: u32 = 32;
 
 // ── Storage keys ─────────────────────────────────────────────────────────────
 #[contracttype]
@@ -70,6 +83,36 @@ pub struct DecodedEvent {
 #[contract]
 pub struct ExplorerContract;
 
+// ── Internal helpers (not part of the contract interface) ─────────────────────
+impl ExplorerContract {
+    /// Read the event sequence counter, requiring the contract to be initialised.
+    ///
+    /// `unwrap_or(0)` would report "0 events" both when no event has been
+    /// submitted and when the counter is missing entirely (uninitialised
+    /// contract, or instance storage restored without it), so callers could not
+    /// tell a real count from a lost one. Panicking makes the discrepancy loud.
+    fn event_seq(env: &Env) -> u64 {
+        if !env.storage().instance().has(&DataKey::Admin) {
+            panic_with_error!(env, Error::NotInitialized);
+        }
+        env.storage().instance()
+            .get(&DataKey::EventSeq)
+            .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
+    }
+
+    /// Reject ABI metadata that would inflate persistent storage without bound.
+    fn validate_meta(env: &Env, meta: &ContractMeta) {
+        if meta.functions.len() > MAX_FUNCTIONS {
+            panic_with_error!(env, Error::InvalidInput);
+        }
+        for f in meta.functions.iter() {
+            if f.params.len() > MAX_PARAMS {
+                panic_with_error!(env, Error::InvalidInput);
+            }
+        }
+    }
+}
+
 #[contractimpl]
 impl ExplorerContract {
 
@@ -82,6 +125,13 @@ impl ExplorerContract {
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::EventSeq, &0u64);
+    }
+
+    /// Return the current admin address.
+    pub fn get_admin(env: Env) -> Address {
+        env.storage().instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized))
     }
 
     /// Transfer admin rights to a new address.
@@ -122,6 +172,7 @@ impl ExplorerContract {
         meta:        ContractMeta,
     ) {
         caller.require_auth();
+        Self::validate_meta(&env, &meta);
         let key = DataKey::Contract(contract_id.clone());
         if env.storage().persistent().has(&key) {
             panic_with_error!(&env, Error::AlreadyExists);
@@ -141,6 +192,7 @@ impl ExplorerContract {
         meta:        ContractMeta,
     ) {
         caller.require_auth();
+        Self::validate_meta(&env, &meta);
         let key = DataKey::Contract(contract_id.clone());
         let existing: ContractMeta = env.storage().persistent()
             .get(&key).unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
@@ -174,13 +226,17 @@ impl ExplorerContract {
         raw_data:    Bytes,
     ) {
         caller.require_auth();
+        // Reject oversized payloads before touching storage.
+        if raw_data.len() > MAX_RAW_DATA_BYTES {
+            panic_with_error!(&env, Error::InvalidInput);
+        }
         // Only admin or registered indexers may submit events.
         let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
         if caller != admin {
             panic_with_error!(&env, Error::Unauthorized);
         }
 
-        let seq: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let seq: u64 = Self::event_seq(&env);
         let event = DecodedEvent {
             seq,
             contract_id: contract_id.clone(),
@@ -207,13 +263,16 @@ impl ExplorerContract {
     }
 
     /// Return the total number of stored events.
+    ///
+    /// Panics with `NotInitialized` if the counter is absent, rather than
+    /// reporting a misleading 0.
     pub fn event_count(env: Env) -> u64 {
-        env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0)
+        Self::event_seq(&env)
     }
 
     /// Fetch a page of events [from, from+limit).
     pub fn get_events(env: Env, from: u64, limit: u32) -> Vec<DecodedEvent> {
-        let total: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let total: u64 = Self::event_seq(&env);
         let mut out: Vec<DecodedEvent> = Vec::new(&env);
         let end = (from + limit as u64).min(total);
         for seq in from..end {
@@ -310,6 +369,143 @@ mod tests {
             &Bytes::new(&env),
         );
         assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    fn test_get_admin() {
+        let (env, client) = setup();
+        let admin     = Address::generate(&env);
+        let new_admin = Address::generate(&env);
+        client.init(&admin);
+        assert_eq!(client.get_admin(), admin);
+
+        client.transfer_admin(&admin, &new_admin);
+        assert_eq!(client.get_admin(), new_admin);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_get_admin_uninitialised_panics() {
+        let (_env, client) = setup();
+        client.get_admin();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_event_count_uninitialised_panics() {
+        let (_env, client) = setup();
+        client.event_count();
+    }
+
+    #[test]
+    fn test_submit_event_max_raw_data_ok() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[4u8; 32]);
+        let mut raw = Bytes::new(&env);
+        for _ in 0..MAX_RAW_DATA_BYTES {
+            raw.push_back(0u8);
+        }
+        client.submit_event(
+            &admin, &cid, &symbol_short!("swap"), &1u32,
+            &String::from_str(&env, "at the limit"),
+            &Vec::new(&env), &raw,
+        );
+        assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_submit_event_oversized_raw_data_panics() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[5u8; 32]);
+        let mut raw = Bytes::new(&env);
+        for _ in 0..(MAX_RAW_DATA_BYTES + 1) {
+            raw.push_back(0u8);
+        }
+        client.submit_event(
+            &admin, &cid, &symbol_short!("swap"), &1u32,
+            &String::from_str(&env, "one byte too many"),
+            &Vec::new(&env), &raw,
+        );
+    }
+
+    /// Build a `ContractMeta` with `n` functions, each carrying `params` params.
+    fn meta_with(env: &Env, admin: &Address, n: u32, params: u32) -> ContractMeta {
+        let mut functions: Vec<FunctionAbi> = Vec::new(env);
+        for _ in 0..n {
+            let mut p: Vec<ParamDef> = Vec::new(env);
+            for _ in 0..params {
+                p.push_back(ParamDef {
+                    name: symbol_short!("amount"),
+                    kind: symbol_short!("i128"),
+                });
+            }
+            functions.push_back(FunctionAbi {
+                name:        symbol_short!("swap"),
+                description: String::from_str(env, "swap"),
+                params:      p,
+            });
+        }
+        ContractMeta {
+            name:          String::from_str(env, "StellarSwap"),
+            description:   String::from_str(env, "DEX on Stellar"),
+            functions,
+            registered_by: admin.clone(),
+        }
+    }
+
+    #[test]
+    fn test_register_contract_at_abi_limits_ok() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[6u8; 32]);
+        let meta = meta_with(&env, &admin, MAX_FUNCTIONS, MAX_PARAMS);
+        client.register_contract(&admin, &cid, &meta);
+        assert_eq!(client.get_contract(&cid).functions.len(), MAX_FUNCTIONS);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_register_contract_too_many_functions_panics() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[7u8; 32]);
+        let meta = meta_with(&env, &admin, MAX_FUNCTIONS + 1, 0);
+        client.register_contract(&admin, &cid, &meta);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_register_contract_too_many_params_panics() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[8u8; 32]);
+        let meta = meta_with(&env, &admin, 1, MAX_PARAMS + 1);
+        client.register_contract(&admin, &cid, &meta);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_update_contract_too_many_functions_panics() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[9u8; 32]);
+        client.register_contract(&admin, &cid, &meta_with(&env, &admin, 1, 1));
+        client.update_contract(&admin, &cid, &meta_with(&env, &admin, MAX_FUNCTIONS + 1, 0));
     }
 
     #[test]
