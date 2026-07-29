@@ -150,6 +150,16 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::Unauthorized);
         }
         env.storage().persistent().set(&key, &meta);
+
+        // Warn when the ABI is intentionally or accidentally wiped so the
+        // indexer can log a human-readable warning instead of silently falling
+        // back to generic descriptions.
+        if meta.functions.is_empty() {
+            env.events().publish(
+                (symbol_short!("abi_cleared"), contract_id),
+                (),
+            );
+        }
     }
 
     /// Fetch metadata for a contract.
@@ -321,5 +331,55 @@ mod tests {
         client.init(&admin);
         // attacker tries to hijack admin — must panic
         client.transfer_admin(&attacker, &attacker);
+    }
+
+    // ── get_events pagination boundary tests (issue #15) ─────────────────────
+
+    /// Helper: initialise the contract, submit `n` dummy events, and return the
+    /// client together with the admin address.
+    fn setup_with_events(n: u32) -> (Env, ExplorerContractClient<'static>, Address) {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[9u8; 32]);
+        for i in 0..n {
+            client.submit_event(
+                &admin,
+                &cid,
+                &symbol_short!("ev"),
+                &(1000u32 + i),
+                &String::from_str(&env, "test event"),
+                &Vec::new(&env),
+                &Bytes::new(&env),
+            );
+        }
+        (env, client, admin)
+    }
+
+    /// from=0, limit=0 → empty vec (no events returned regardless of total).
+    #[test]
+    fn test_get_events_limit_zero_returns_empty() {
+        let (_env, client, _admin) = setup_with_events(5);
+        let result = client.get_events(&0u64, &0u32);
+        assert_eq!(result.len(), 0u32);
+    }
+
+    /// from=total, limit=10 → empty vec (cursor is already past the end).
+    #[test]
+    fn test_get_events_from_equals_total_returns_empty() {
+        let (_env, client, _admin) = setup_with_events(5);
+        let total = client.event_count(); // 5
+        let result = client.get_events(&total, &10u32);
+        assert_eq!(result.len(), 0u32);
+    }
+
+    /// from=total-1, limit=100 → exactly 1 event (only the last event).
+    #[test]
+    fn test_get_events_from_last_returns_one() {
+        let (_env, client, _admin) = setup_with_events(5);
+        let total = client.event_count(); // 5
+        let result = client.get_events(&(total - 1), &100u32);
+        assert_eq!(result.len(), 1u32);
     }
 }
