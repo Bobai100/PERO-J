@@ -86,6 +86,21 @@ load-test:
 	  --env API_BASE_URL=$(API_BASE_URL) \
 	  tests/load/api_load_test.js
 
+# ── Database Backup (issue #106) ──────────────────────────────────────────────
+# Requires: pg_dump (PostgreSQL client), gzip
+.PHONY: backup backup-restore
+
+backup:
+	@echo "Running database backup..."
+	scripts/backup.sh
+
+backup-restore:
+	@echo "Available backups:"
+	@ls -1t backups/soroban_explorer_*.sql.gz 2>/dev/null || echo "No backups found."
+	@echo ""
+	@echo "To restore the latest backup, run:"
+	@echo '  gunzip -c $$(ls -t backups/soroban_explorer_*.sql.gz | head -1) | psql "$$DATABASE_URL"'
+
 # ── Changelog ─────────────────────────────────────────────────────────────────
 # Regenerate CHANGELOG.md from conventional commits using git-cliff.
 # Install: cargo install git-cliff  OR  brew install git-cliff
