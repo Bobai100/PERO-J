@@ -20,10 +20,13 @@ function buildSacMap(assets) {
       const asset = issuer ? new Asset(code, issuer) : Asset.native();
       const contractId = new Contract(asset.contractId(NETWORK_PASSPHRASE)).contractId();
       map.set(contractId, issuer ? code : "XLM");
-    } catch {
-      // skip malformed entries
+    } catch (err) {
+      // Log malformed entries so operators can fix SAC_ASSETS config instead of
+      // silently dropping them, which would cause detectSac() misses at runtime.
+      console.error(`[sac] skipping malformed SAC entry { code: ${JSON.stringify(code)}, issuer: ${JSON.stringify(issuer)} }:`, err.message);
     }
   }
+  console.log(`[sac] registered ${map.size} SAC asset(s)`);
   return map;
 }
 
