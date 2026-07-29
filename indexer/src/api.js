@@ -81,6 +81,15 @@ export function startApi() {
     })
   );
 
+  // GET /api/functions — distinct function names across all events
+  app.get(
+    "/api/functions",
+    asyncHandler(async (req, res) => {
+      const result = await db.getDistinctFunctions();
+      res.json(result);
+    })
+  );
+
   // GET /api/events?contract=&fn=&page=&q=
   app.get(
     "/api/events",
