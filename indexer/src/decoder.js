@@ -1,5 +1,5 @@
 import { LRUCache } from "lru-cache";
-import { scValToNative } from "@stellar/stellar-sdk";
+import { scValToNative } from "@stellar/stellar-sdk"; // only scValToNative is used; xdr and StrKey are intentionally excluded (#30)
 import { db } from "./db.js";
 import { detectSac } from "./sac.js";
 
