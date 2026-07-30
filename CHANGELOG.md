@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Log malformed SAC_ASSETS entries and startup asset count ([`c88a102`](../../commit/c88a10289345f382fee9a7c81a5438698fcbffb5))
+
 - Resolve frontend CI failures ([`3f89ce9`](../../commit/3f89ce9d7c66e2ab70f5ffcf8c3e8ec63053c05e))
 
 - Add skipLibCheck and vite/client types to tsconfig.json
@@ -180,6 +182,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`aeb2d39`](../../commit/aeb2d3966824bee99844d95bc2502022cb190f4e))
 
 - Document GET /api/tokens/:id/volume and add decimals param ([`b512953`](../../commit/b5129536d0e0108978c33c1d93f53dae4ecbce8c))
 
