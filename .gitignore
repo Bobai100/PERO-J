@@ -6,6 +6,7 @@ target/
 node_modules/
 indexer/node_modules/
 frontend/node_modules/
+tests/e2e/node_modules/
 
 # Frontend build
 frontend/dist/

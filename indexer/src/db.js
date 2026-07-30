@@ -310,6 +310,17 @@ export const db = {
   },
 
   /**
+   * Fetch distinct function names from the events table.
+   * @returns {Promise<string[]>}
+   */
+  async getDistinctFunctions() {
+    const { rows } = await pool.query(
+      "SELECT DISTINCT function FROM events ORDER BY function"
+    );
+    return rows.map((r) => r.function);
+  },
+
+  /**
    * Read the persisted indexer cursor from the indexer_state table.
    * @returns {Promise<number|null>} The last successfully indexed ledger, or null.
    */
