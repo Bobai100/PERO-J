@@ -260,6 +260,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`914c72f`](../../commit/914c72ffe79395ea47f8fd2965ea1900e9c1f510))
+
 - Auto-update CHANGELOG.md [skip ci] ([`dbeb400`](../../commit/dbeb4007050e4533b80b31dd8c2e67246fb0411e))
 
 - Auto-update CHANGELOG.md [skip ci] ([`e3fca5f`](../../commit/e3fca5f828d9b608e06d9c4681cc5381da5411fe))
@@ -552,6 +554,22 @@ Add a tests/integration/ directory with stub tests that document the
   Closes [#25](../../issues/25)
   Closes [#27](../../issues/27)
   Closes [#28](../../issues/28)
+
+
+- Add full test coverage for decoder, scval, sac, auth, sep41Metadata, validateSep41, db ([`2bbd439`](../../commit/2bbd439e443d94e48b205c6bbce641442f323c1b))
+
+- Add indexer/test/decoder.test.js (10 tests)
+  - Add indexer/test/scval.test.js (38 tests, all ScVal types + BigInt edge cases)
+  - Add indexer/test/sac.test.js (13 tests, real XLM SAC contract ID on testnet)
+  - Add indexer/test/auth.test.js (20 tests, pre-built base64 XDR fixtures)
+  - Add indexer/test/sep41Metadata.test.js (6 tests, stubbed simulateTransaction)
+  - Add indexer/test/validateSep41.test.js (8 tests, stubbed simulateTransaction)
+  - Add indexer/test/db.test.js (20 tests, pg.Pool monkey-patched)
+
+  Bug fixes in source modules:
+  - Fix invalid DUMMY_SOURCE strkey in src/validateSep41.js (crashed at module load
+    when Address.fromString() validated the checksum)
+  - Fix invalid DUMMY_SOURCE strkey in src/sep41Metadata.js (crashed new Account())
 
 
 
