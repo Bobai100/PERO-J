@@ -12,9 +12,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Clamp scvI128/scvI256 bit-shifting to signed range ([#33](../../issues/33)) ([`8fe5111`](../../commit/8fe51110357b58c743084a5f97f78550e7651cbf))
 
-- Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
-
 - Resolve assigned issue fixes ([`34a1377`](../../commit/34a1377ba354aa5d72de57a3f095f9822e8462e1))
+
+- Return readable strings for opaque ScVal variants ([`2b2dd69`](../../commit/2b2dd692d4b1d37f64ba6f4c5a18a139bf8512c1))
+
+scvLedgerKeyContractInstance, scvLedgerKeyNonce, and scvContractInstance
+  previously returned plain objects that serialised to [object Object] when
+  coerced to string (e.g. in genericDescription).
+
+  - scvLedgerKeyContractInstance → "<contract-instance>"
+  - scvContractInstance          → "<contract-instance>"
+  - scvLedgerKeyNonce            → "<nonce:{n}>" (preserves nonce value)
+
+  Adds indexer/test/scval.test.js with 4 test cases covering all three
+  variants and the join-into-description scenario
+
+
+- Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
 
@@ -126,6 +140,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`2dc0400`](../../commit/2dc0400a37bd7dd94418273a2ae1abd86dd27cf5))
 
 - Auto-update CHANGELOG.md [skip ci] ([`e3eabd2`](../../commit/e3eabd2e1d7b827fce42b24299ccbf3c47f325a7))
 
