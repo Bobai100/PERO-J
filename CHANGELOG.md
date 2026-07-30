@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Remove unused xdr and StrKey imports ([#30](../../issues/30)) ([`562ca48`](../../commit/562ca484aa0af97ece6b1570db9a0821a9b08808))
+
+Only scValToNative is used in decoder.js. The xdr and StrKey named
+  imports were present in an earlier version but are no longer referenced.
+  Removing dead imports reduces the module's dependency surface and makes
+  it clear what the module actually relies on.
+
+  Closes [#30](../../issues/30)
+
+
 - Handle BigInt in JSON.stringify for raw_data ([`10708cd`](../../commit/10708cd79455d3b74f75b7f9daef07840821e69a))
 
 scValToNative returns BigInt for i64/u64/i128/u128 values. Passing the
@@ -162,6 +172,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`3846d59`](../../commit/3846d5983235a147141d0b7341965b12303bb9ff))
 
 - Auto-update CHANGELOG.md [skip ci] ([`e65789e`](../../commit/e65789ed540c0e4e8a424058d88eef23d566590f))
 
