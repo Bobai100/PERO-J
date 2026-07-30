@@ -126,11 +126,34 @@ make dev
 | `GET /api/contracts/:id` | Contract ABI metadata |
 | `POST /api/contracts` | Register contract metadata |
 | `GET /api/wallet/:address` | Wallet event history |
+| `GET /api/tokens/:id/volume?decimals=` | 24-hour rolling transfer volume for a SEP-41 token. Optional `decimals` query param (integer 0–38) overrides the on-chain metadata lookup. |
 
 PostgreSQL `events.seq` is the canonical REST/frontend identifier. On-chain
 `EventSeq` values are stored separately as nullable `onchain_seq` values because
 the database row sequence and contract submission sequence are different
 namespaces and can diverge.
+
+### Volume endpoint
+
+`GET /api/tokens/:id/volume` returns the 24-hour rolling transfer volume for a SEP-41 token.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` (path) | string | yes | Contract ID of the SEP-41 token |
+| `decimals` (query) | integer 0–38 | no | Override decimal precision. When omitted, decimals are resolved from on-chain metadata / simulation (defaults to 7 if unavailable). |
+
+Example response:
+
+```json
+{
+  "contract_id": "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+  "window": "24h",
+  "volume": "1048576.0000000",
+  "decimals": 7
+}
+```
+
+
 
 ### Uptime Monitoring
 
