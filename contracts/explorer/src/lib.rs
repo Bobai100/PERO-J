@@ -1,12 +1,12 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
-    Address, Bytes, BytesN, Env, Map, String, Symbol, Vec,
-    log, panic_with_error,
+    contract, contracterror, contractimpl, contracttype, symbol_short,
+    Address, Bytes, BytesN, Env, String, Symbol, Vec,
+    panic_with_error,
 };
 
 // ── Error codes ──────────────────────────────────────────────────────────────
-#[contracttype]
+#[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum Error {
@@ -19,8 +19,9 @@ pub enum Error {
 #[contracttype]
 pub enum DataKey {
     Admin,
-    Contract(BytesN<32>),   // contract_id → ContractMeta
-    EventLog(u64),          // seq → DecodedEvent
+    Contract(BytesN<32>),       // contract_id → ContractMeta
+    ContractList,               // Vec<BytesN<32>> of all registered IDs
+    EventLog(u64),              // seq → DecodedEvent
     EventSeq,
 }
 
@@ -127,6 +128,12 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::AlreadyExists);
         }
         env.storage().persistent().set(&key, &meta);
+
+        let mut list: Vec<BytesN<32>> = env.storage().persistent()
+            .get(&DataKey::ContractList).unwrap_or(Vec::new(&env));
+        list.push_back(contract_id.clone());
+        env.storage().persistent().set(&DataKey::ContractList, &list);
+
         env.events().publish(
             (symbol_short!("register"), contract_id),
             meta.name,
@@ -157,6 +164,13 @@ impl ExplorerContract {
         env.storage().persistent()
             .get(&DataKey::Contract(contract_id))
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound))
+    }
+
+    /// Return all registered contract IDs.
+    pub fn get_contracts(env: Env) -> Vec<BytesN<32>> {
+        env.storage().persistent()
+            .get(&DataKey::ContractList)
+            .unwrap_or(Vec::new(&env))
     }
 
     // ── Event Decoder ─────────────────────────────────────────────────────────
@@ -321,5 +335,36 @@ mod tests {
         client.init(&admin);
         // attacker tries to hijack admin — must panic
         client.transfer_admin(&attacker, &attacker);
+    }
+
+    #[test]
+    fn test_get_contracts_lists_registered_ids() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid1: BytesN<32> = BytesN::from_array(&env, &[1u8; 32]);
+        let cid2: BytesN<32> = BytesN::from_array(&env, &[2u8; 32]);
+
+        let meta = ContractMeta {
+            name: String::from_str(&env, "A"),
+            description: String::from_str(&env, ""),
+            functions: Vec::new(&env),
+            registered_by: admin.clone(),
+        };
+
+        let list = client.get_contracts();
+        assert_eq!(list.len(), 0);
+
+        client.register_contract(&admin, &cid1, &meta.clone());
+        let list = client.get_contracts();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list.get(0).unwrap(), cid1);
+
+        client.register_contract(&admin, &cid2, &meta);
+        let list = client.get_contracts();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list.get(0).unwrap(), cid1);
+        assert_eq!(list.get(1).unwrap(), cid2);
     }
 }
