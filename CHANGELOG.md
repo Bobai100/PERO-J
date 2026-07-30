@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Handle BigInt in JSON.stringify for raw_data ([`10708cd`](../../commit/10708cd79455d3b74f75b7f9daef07840821e69a))
+
+scValToNative returns BigInt for i64/u64/i128/u128 values. Passing the
+  decoded data directly to JSON.stringify() threw:
+    TypeError: Do not know how to serialize a BigInt
+
+
 - Redact sensitive args and truncate to 64 chars in genericDescription ([#29](../../issues/29)) ([`852cb12`](../../commit/852cb12ef7522bfc20e79275e5ef304014717d86))
 
 - Add isSensitive() helper that flags:
@@ -155,6 +162,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`e65789e`](../../commit/e65789ed540c0e4e8a424058d88eef23d566590f))
 
 - Auto-update CHANGELOG.md [skip ci] ([`f7201b3`](../../commit/f7201b383ce7af4f9288e5087d3bd72113a40868))
 
