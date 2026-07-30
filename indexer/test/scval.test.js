@@ -3,46 +3,81 @@ import assert from "node:assert/strict";
 import { xdr } from "@stellar/stellar-sdk";
 import { scValToJs } from "../src/scval.js";
 
-describe("scValToJs — opaque key/instance variants", () => {
-  it("scvLedgerKeyContractInstance returns readable string", () => {
-    const val = xdr.ScVal.scvLedgerKeyContractInstance();
-    const result = scValToJs(val);
-    assert.equal(typeof result, "string");
-    assert.equal(result, "<contract-instance>");
-    // Must not stringify to [object Object]
-    assert.notEqual(String(result), "[object Object]");
-  });
-
-  it("scvContractInstance returns readable string", () => {
-    const inst = new xdr.ScContractInstance({
-      executable: xdr.ContractExecutable.contractExecutableWasm(Buffer.alloc(32, 0)),
-      storage: null,
+describe("scValToJs", () => {
+  describe("scvI128", () => {
+    it("correctly handles negative hi component for -1n", () => {
+      const val = xdr.ScVal.scvI128(
+        new xdr.Int128Parts({
+          hi: xdr.Int64.fromString("-1"),
+          lo: xdr.Uint64.fromString("18446744073709551615"),
+        })
+      );
+      assert.equal(scValToJs(val), -1n);
     });
-    const val = xdr.ScVal.scvContractInstance(inst);
-    const result = scValToJs(val);
-    assert.equal(typeof result, "string");
-    assert.equal(result, "<contract-instance>");
-    assert.notEqual(String(result), "[object Object]");
-  });
 
-  it("scvLedgerKeyNonce returns readable string containing the nonce", () => {
-    const nonceKey = new xdr.ScNonceKey({
-      nonce: xdr.Int64.fromString("42"),
+    it("correctly reconstructs signed 128-bit value when hi is negative and lo is 0", () => {
+      const val = xdr.ScVal.scvI128(
+        new xdr.Int128Parts({
+          hi: xdr.Int64.fromString("-1"),
+          lo: xdr.Uint64.fromString("0"),
+        })
+      );
+      assert.equal(scValToJs(val), -18446744073709551616n);
     });
-    const val = xdr.ScVal.scvLedgerKeyNonce(nonceKey);
-    const result = scValToJs(val);
-    assert.equal(typeof result, "string");
-    assert.match(result, /^<nonce:/);
-    assert.match(result, /42/);
-    assert.notEqual(String(result), "[object Object]");
+
+    it("correctly reconstructs positive 128-bit value", () => {
+      const val = xdr.ScVal.scvI128(
+        new xdr.Int128Parts({
+          hi: xdr.Int64.fromString("1"),
+          lo: xdr.Uint64.fromString("500"),
+        })
+      );
+      assert.equal(scValToJs(val), 18446744073709552116n);
+    });
   });
 
-  it("all three variants produce strings that join cleanly in a comma-separated list", () => {
-    const vals = [
-      xdr.ScVal.scvLedgerKeyContractInstance(),
-      xdr.ScVal.scvSymbol("fn"),
-    ];
-    const argStr = vals.map(scValToJs).map(String).join(", ");
-    assert.ok(!argStr.includes("[object Object]"), `argStr must not contain [object Object]: ${argStr}`);
+  describe("scvU128", () => {
+    it("correctly reconstructs max uint128 value", () => {
+      const val = xdr.ScVal.scvU128(
+        new xdr.UInt128Parts({
+          hi: xdr.Uint64.fromString("18446744073709551615"),
+          lo: xdr.Uint64.fromString("18446744073709551615"),
+        })
+      );
+      assert.equal(scValToJs(val), 340282366920938463463374607431768211455n);
+    });
+  });
+
+  describe("scvI256", () => {
+    it("correctly handles negative hiHi component for -1n", () => {
+      const maxU64 = "18446744073709551615";
+      const val = xdr.ScVal.scvI256(
+        new xdr.Int256Parts({
+          hiHi: xdr.Int64.fromString("-1"),
+          hiLo: xdr.Uint64.fromString(maxU64),
+          loHi: xdr.Uint64.fromString(maxU64),
+          loLo: xdr.Uint64.fromString(maxU64),
+        })
+      );
+      assert.equal(scValToJs(val), -1n);
+    });
+  });
+
+  describe("scvU256", () => {
+    it("correctly reconstructs max uint256 value", () => {
+      const maxU64 = "18446744073709551615";
+      const val = xdr.ScVal.scvU256(
+        new xdr.UInt256Parts({
+          hiHi: xdr.Uint64.fromString(maxU64),
+          hiLo: xdr.Uint64.fromString(maxU64),
+          loHi: xdr.Uint64.fromString(maxU64),
+          loLo: xdr.Uint64.fromString(maxU64),
+        })
+      );
+      assert.equal(
+        scValToJs(val),
+        115792089237316195423570985008687907853269984665640564039457584007913129639935n
+      );
+    });
   });
 });

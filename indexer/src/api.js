@@ -128,7 +128,16 @@ export function startApi() {
   app.post(
     "/api/contracts",
     asyncHandler(async (req, res) => {
-      await db.upsertContractMeta(req.body);
+      const existing = await db.getContractMeta(req.body.id);
+      const registeredBy = req.body.registered_by ?? existing?.registered_by;
+
+      if (existing?.registered_by && !registeredBy) {
+        return res
+          .status(400)
+          .json({ error: "registered_by is required to update contract metadata" });
+      }
+
+      await db.upsertContractMeta({ ...req.body, registered_by: registeredBy });
       res.status(201).json({ ok: true });
     })
   );
