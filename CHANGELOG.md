@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Reload SAC map on SIGHUP signal ([#34](../../issues/34)) ([`2640006`](../../commit/264000636ba52fdffae2ebffd1b344a2169bf229))
+
 - Clamp scvI128/scvI256 bit-shifting to signed range ([#33](../../issues/33)) ([`8fe5111`](../../commit/8fe51110357b58c743084a5f97f78550e7651cbf))
 
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
@@ -124,6 +126,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`e3eabd2`](../../commit/e3eabd2e1d7b827fce42b24299ccbf3c47f325a7))
 
 - Auto-update CHANGELOG.md [skip ci] ([`5d273dd`](../../commit/5d273dd1fe7383d2cfedccf43cccf53864bfddd1))
 
