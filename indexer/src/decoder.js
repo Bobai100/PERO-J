@@ -59,7 +59,7 @@ export async function decode(ev) {
     tx_hash: ev.txHash,
     description,
     raw_topics: topics.map(String),
-    raw_data: JSON.stringify(data),
+    raw_data: JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v)),
     event_addresses: eventAddresses,
     ...(isSac && { sac_asset: assetCode }),
   };
