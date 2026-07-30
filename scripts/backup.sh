@@ -1,36 +1,47 @@
 #!/usr/bin/env bash
-#
-# backup.sh — PostgreSQL backup script using pg_dump
-#
-# Usage:
-#   ./scripts/backup.sh                        # uses defaults
-#   DATABASE_URL="postgres://..." ./scripts/backup.sh
-#
-# Environment variables (with defaults):
-#   DATABASE_URL   PostgreSQL connection string
-#   BACKUP_DIR     Directory to store backups      (default: ./backups)
-#   RETENTION_DAYS Number of days to keep backups   (default: 7)
-#
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-DATABASE_URL="${DATABASE_URL:-postgres://user:password@localhost:5432/soroban_explorer}"
-BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
-RETENTION_DAYS="${RETENTION_DAYS:-7}"
+BACKUP_DIR="${BACKUP_DIR:-${PROJECT_DIR}/backups}"
+LOG_FILE="${LOG_FILE:-${PROJECT_DIR}/logs/backup.log}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-BACKUP_FILE="soroban_explorer_${TIMESTAMP}.sql.gz"
+BACKUP_FILE="${BACKUP_DIR}/soroban_explorer_${TIMESTAMP}.sql"
 
-mkdir -p "$BACKUP_DIR"
+PGHOST="${PGHOST:-localhost}"
+PGPORT="${PGPORT:-5432}"
+PGUSER="${PGUSER:-user}"
+PGDATABASE="${PGDATABASE:-soroban_explorer}"
+PGPASSWORD="${PGPASSWORD:-}"
 
-echo "[$(date)] Starting backup of soroban_explorer..."
-pg_dump "$DATABASE_URL" --no-owner --clean | gzip > "$BACKUP_DIR/$BACKUP_FILE"
+export PGPASSWORD
 
-echo "[$(date)] Backup saved: $BACKUP_DIR/$BACKUP_FILE  ($(du -h "$BACKUP_DIR/$BACKUP_FILE" | cut -f1))"
+mkdir -p "${BACKUP_DIR}"
+mkdir -p "$(dirname "${LOG_FILE}")"
 
-# Retention: remove backups older than RETENTION_DAYS
-find "$BACKUP_DIR" -name "soroban_explorer_*.sql.gz" -type f -mtime "+$RETENTION_DAYS" -delete
-echo "[$(date)] Retention applied: removed backups older than ${RETENTION_DAYS} days."
+echo "[$(date -Iseconds)] Starting backup of ${PGDATABASE} to ${BACKUP_FILE}" >> "${LOG_FILE}"
 
-echo "[$(date)] Backup complete."
+if pg_dump \
+  --host="${PGHOST}" \
+  --port="${PGPORT}" \
+  --username="${PGUSER}" \
+  --dbname="${PGDATABASE}" \
+  --format=plain \
+  --compress=0 \
+  --no-owner \
+  --no-privileges \
+  --clean \
+  --if-exists \
+  --create \
+  > "${BACKUP_FILE}" 2>> "${LOG_FILE}"; then
+  echo "[$(date -Iseconds)] Backup completed successfully: ${BACKUP_FILE}" >> "${LOG_FILE}"
+else
+  echo "[$(date -Iseconds)] Backup FAILED" >> "${LOG_FILE}"
+  rm -f "${BACKUP_FILE}"
+  exit 1
+fi
+
+find "${BACKUP_DIR}" -name 'soroban_explorer_*.sql' -mtime +30 -delete 2>> "${LOG_FILE}"
+
+echo "[$(date -Iseconds)] Cleanup complete. Backups older than 30 days removed." >> "${LOG_FILE}"
