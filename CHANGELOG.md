@@ -133,6 +133,18 @@ scvLedgerKeyContractInstance, scvLedgerKeyNonce, and scvContractInstance
   ed25519-dalek to 3.0.0, which soroban-env-host (">=2.0.0") cannot build against
 
 
+- Emit abi_cleared event and add get_events boundary tests ([`288c799`](../../commit/288c7992271017e3f113008f2b25f598da5a2328))
+
+Issue [#16](../../issues/16): emit (abi_cleared, contract_id) event in update_contract
+  when meta.functions is empty, so the indexer can log a warning
+  instead of silently falling back to generic descriptions.
+
+  Issue [#15](../../issues/15): add three parameterised get_events pagination boundary tests:
+  - test_get_events_limit_zero_returns_empty  (from=0, limit=0)
+  - test_get_events_from_equals_total_returns_empty (from=total, limit=10)
+  - test_get_events_from_last_returns_one  (from=total-1, limit=100)
+
+
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
@@ -245,6 +257,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`e3fca5f`](../../commit/e3fca5f828d9b608e06d9c4681cc5381da5411fe))
 
 - Auto-update CHANGELOG.md [skip ci] ([`f30e7e1`](../../commit/f30e7e125cfcd9a1fcd32a1ff7a30ff28327e27a))
 
