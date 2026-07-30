@@ -95,6 +95,12 @@ pub struct DecodedEvent {
     pub raw_data:     Bytes,
 }
 
+// ── TTL constants ─────────────────────────────────────────────────────────────
+/// Minimum remaining ledgers before we extend the TTL (~1 day at 5 s/ledger).
+const EVENTSEQ_TTL_THRESHOLD: u32 = 17_280;
+/// Target TTL after extension (~30 days at 5 s/ledger).
+const EVENTSEQ_TTL_BUMP: u32 = 518_400;
+
 // ── Contract ──────────────────────────────────────────────────────────────────
 #[contract]
 pub struct ExplorerContract;
