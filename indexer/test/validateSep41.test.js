@@ -1,0 +1,124 @@
+/**
+ * Tests for src/validateSep41.js — validateSep41()
+ *
+ * validateSep41.js probes 10 SEP-41 function names by simulating each one.
+ * We stub SorobanRpc.Server#simulateTransaction so no real network calls are made.
+ *
+ * Scenarios:
+ *  1. All functions present  → compliant: true,  all results true
+ *  2. All functions absent   → compliant: false, all results false
+ *  3. Execution errors       → treated as "present" (function exists, rejected dummy args)
+ *  4. Mixed presence         → compliant: false, only present ones true
+ *  5. Return shape guarantees
+ */
+
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { SorobanRpc } from "@stellar/stellar-sdk";
+
+// ── stub helpers ──────────────────────────────────────────────────────────────
+
+// Success: function ran (or succeeded) — present
+function simSuccess() {
+  return { result: { retval: null } };
+}
+
+// Execution error: function exists but rejected our dummy args — still present
+function simExecError() {
+  return { error: "wasm trap: unreachable instruction" };
+}
+
+// Missing function: not present
+function simMissingFn() {
+  return { error: "function not found" };
+}
+
+// ── patch SorobanRpc.Server prototype BEFORE the module is imported ───────────
+let _stubbedSimulate = null;
+
+SorobanRpc.Server.prototype.simulateTransaction = async function (_tx) {
+  if (typeof _stubbedSimulate === "function") return _stubbedSimulate(_tx);
+  return simSuccess();
+};
+
+import { validateSep41 } from "../src/validateSep41.js";
+
+const CONTRACT_ID = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+const ALL_SEP41_FUNCTIONS = [
+  "name", "symbol", "decimals", "balance", "allowance",
+  "transfer", "transfer_from", "approve", "burn", "burn_from",
+];
+
+// ── tests ─────────────────────────────────────────────────────────────────────
+
+describe("validateSep41() — fully compliant contract", () => {
+  it("returns compliant: true when all 10 functions succeed", async () => {
+    _stubbedSimulate = () => simSuccess();
+    const { compliant, results } = await validateSep41(CONTRACT_ID);
+    assert.equal(compliant, true);
+    assert.ok(Object.values(results).every((v) => v === true));
+  });
+
+  it("results object contains all 10 SEP-41 function names", async () => {
+    _stubbedSimulate = () => simSuccess();
+    const { results } = await validateSep41(CONTRACT_ID);
+    for (const fn of ALL_SEP41_FUNCTIONS) {
+      assert.ok(fn in results, `missing key: ${fn}`);
+    }
+  });
+});
+
+describe("validateSep41() — fully non-compliant contract", () => {
+  it("returns compliant: false when all functions are missing", async () => {
+    _stubbedSimulate = () => simMissingFn();
+    const { compliant, results } = await validateSep41(CONTRACT_ID);
+    assert.equal(compliant, false);
+    assert.ok(Object.values(results).every((v) => v === false));
+  });
+});
+
+describe("validateSep41() — execution errors treated as present", () => {
+  it("returns compliant: true when all functions throw execution errors", async () => {
+    _stubbedSimulate = () => simExecError();
+    const { compliant, results } = await validateSep41(CONTRACT_ID);
+    assert.equal(compliant, true);
+    assert.ok(Object.values(results).every((v) => v === true));
+  });
+});
+
+describe("validateSep41() — mixed compliance", () => {
+  it("returns compliant: false when some functions are missing", async () => {
+    // First 7 succeed, last 3 fail
+    let callCount = 0;
+    _stubbedSimulate = async () => (callCount++ < 7 ? simSuccess() : simMissingFn());
+    const { compliant } = await validateSep41(CONTRACT_ID);
+    assert.equal(compliant, false);
+  });
+
+  it("results map contains only boolean values", async () => {
+    let callCount = 0;
+    _stubbedSimulate = async () => (callCount++ % 2 === 0 ? simSuccess() : simMissingFn());
+    const { results } = await validateSep41(CONTRACT_ID);
+    for (const [fn, val] of Object.entries(results)) {
+      assert.equal(typeof val, "boolean", `${fn} should be boolean, got ${typeof val}`);
+    }
+  });
+});
+
+describe("validateSep41() — return shape", () => {
+  it("always returns { compliant, results } with correct types", async () => {
+    _stubbedSimulate = () => simSuccess();
+    const out = await validateSep41(CONTRACT_ID);
+    assert.ok("compliant" in out, "missing compliant key");
+    assert.ok("results"   in out, "missing results key");
+    assert.equal(typeof out.compliant, "boolean");
+    assert.equal(typeof out.results,   "object");
+  });
+
+  it("results has exactly 10 entries", async () => {
+    _stubbedSimulate = () => simSuccess();
+    const { results } = await validateSep41(CONTRACT_ID);
+    assert.equal(Object.keys(results).length, 10);
+  });
+});

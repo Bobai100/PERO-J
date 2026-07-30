@@ -19,7 +19,7 @@ const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET;
 // Dummy source account — simulation never submits, so balance doesn't matter.
 // Note: The dummy account must exist on the target network, or configure process.env.OPERATIONAL_ACCOUNT.
 const DUMMY_SOURCE =
-  process.env.OPERATIONAL_ACCOUNT || "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+  process.env.OPERATIONAL_ACCOUNT || "GCFIRY65OQE7DFP5KLNS2PF2LVZMUZYJX4OZIEQ36N2IQANUB5XVYOJR";
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 const METADATA_CACHE_TTL_MS = 60 * 60 * 1000;
