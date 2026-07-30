@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve frontend CI failures ([`3f89ce9`](../../commit/3f89ce9d7c66e2ab70f5ffcf8c3e8ec63053c05e))
+
+- Add skipLibCheck and vite/client types to tsconfig.json
+  - Replace process.env with import.meta.env.DEV in ErrorBoundary
+  - Add distinctFunctions endpoint to API client and server
+  - Add getDistinctFunctions query to database module
+
+
 - Remove unused xdr and StrKey imports ([#30](../../issues/30)) ([`562ca48`](../../commit/562ca484aa0af97ece6b1570db9a0821a9b08808))
 
 Only scValToNative is used in decoder.js. The xdr and StrKey named
@@ -173,6 +181,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`8a5ef83`](../../commit/8a5ef8389fca5e8ec39a134e68bc9f3077fd2ddc))
+
 - Auto-update CHANGELOG.md [skip ci] ([`3846d59`](../../commit/3846d5983235a147141d0b7341965b12303bb9ff))
 
 - Auto-update CHANGELOG.md [skip ci] ([`e65789e`](../../commit/e65789ed540c0e4e8a424058d88eef23d566590f))
@@ -231,6 +241,35 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add end-to-end tests verifying full pipeline (contract → indexer → API → frontend) ([`b774907`](../../commit/b774907e44bc12dfc98166ccb479dac83c91db7a))
+
+Adds a tests/e2e/ directory with Playwright-based E2E tests that:
+
+  - Start a full local stack via Docker Compose (postgres + indexer + frontend)
+    with a Stellar Soroban sandbox (stellar/quickstart)
+  - Build and deploy the ExplorerContract WASM to the sandbox
+  - Initialize the contract and register ABI metadata
+  - Submit a test event via the contract's submit_event function
+  - Wait for the indexer to poll and decode the event
+  - Verify the event appears in the REST API
+  - Assert the frontend renders the decoded description
+  - Test navigation to event detail and contract pages
+  - Verify pagination controls are functional
+
+  The test infrastructure includes:
+  - docker-compose.e2e.yml       — Extended stack with Soroban sandbox
+  - helpers/deploy.js             — Automated contract deployment + seeding
+  - fixtures/explorer-abi.json    — ABI fixture for the ExplorerContract
+  - e2e.test.js                  — 7 Playwright test cases
+  - playwright.config.ts          — Playwright configuration
+  - package.json                 — Dependencies (@playwright/test, @stellar/stellar-sdk)
+  - Makefile targets             — e2e-setup, e2e-build, e2e-up, e2e-down,
+                                    e2e-deploy, e2e-test, e2e, e2e-ci
+  - CI job in ci.yml             — Full E2E on PR/push to main
+
+  closes [#109](../../issues/109)
+
 
 - Add CI pipeline, Docker Compose infrastructure, and frontend containerization ([`99a233a`](../../commit/99a233a5e5a70cf17f53f05e8a956393bf6b048c))
 
