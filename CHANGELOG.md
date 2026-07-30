@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`3e1e59d`](../../commit/3e1e59d5dc06771e0820eabce39f03bdc08921b8))
+
 - Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
 
 Closes [#1](../../issues/1), [#2](../../issues/2), [#3](../../issues/3), [#4](../../issues/4).
@@ -257,6 +259,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`dbeb400`](../../commit/dbeb4007050e4533b80b31dd8c2e67246fb0411e))
 
 - Auto-update CHANGELOG.md [skip ci] ([`e3fca5f`](../../commit/e3fca5f828d9b608e06d9c4681cc5381da5411fe))
 
