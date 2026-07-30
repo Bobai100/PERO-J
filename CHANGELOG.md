@@ -246,6 +246,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`f30e7e1`](../../commit/f30e7e125cfcd9a1fcd32a1ff7a30ff28327e27a))
+
 - Auto-update CHANGELOG.md [skip ci] ([`75074c9`](../../commit/75074c9a7160fcddaa5f8adc1d25ae11946c5ef1))
 
 - Auto-update CHANGELOG.md [skip ci] ([`ada6b96`](../../commit/ada6b962732d5808ce0350f76055574f64a4d03e))
@@ -510,6 +512,28 @@ Closes [#3](../../issues/3) — Parse ScVal Types to Native JavaScript Types
     PRINCIPALS metadata. Include signing instructions for file verification.
   - Set NODE_ENV=production in Makefile indexer target to enable production
     optimizations in pino, express, and other Node.js libraries
+
+
+
+### Testing
+
+- Add WASM sandbox integration test stubs ([`34a2dba`](../../commit/34a2dba4cf9dec0223758b8b5891a33584a9b96a))
+
+Add a tests/integration/ directory with stub tests that document the
+  intended integration test flow for the explorer contract deployed to a
+  real Stellar CLI sandbox.  No WASM is compiled and no sandbox is
+  required to run the stubs.
+
+  Files added:
+  - tests/integration/README.md         — setup instructions
+  - tests/integration/run_integration.sh — shell CLI test harness
+  - tests/integration/rust/Cargo.toml   — standalone test crate
+  - tests/integration/rust/src/lib.rs   — Rust stub tests
+
+  Closes [#24](../../issues/24)
+  Closes [#25](../../issues/25)
+  Closes [#27](../../issues/27)
+  Closes [#28](../../issues/28)
 
 
 
