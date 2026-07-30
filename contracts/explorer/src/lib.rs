@@ -66,6 +66,12 @@ pub struct DecodedEvent {
     pub raw_data:     Bytes,
 }
 
+// ── TTL constants ─────────────────────────────────────────────────────────────
+/// Minimum remaining ledgers before we extend the TTL (~1 day at 5 s/ledger).
+const EVENTSEQ_TTL_THRESHOLD: u32 = 17_280;
+/// Target TTL after extension (~30 days at 5 s/ledger).
+const EVENTSEQ_TTL_BUMP: u32 = 518_400;
+
 // ── Contract ──────────────────────────────────────────────────────────────────
 #[contract]
 pub struct ExplorerContract;
@@ -81,7 +87,8 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::AlreadyExists);
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::EventSeq, &0u64);
+        env.storage().persistent().set(&DataKey::EventSeq, &0u64);
+        env.storage().persistent().extend_ttl(&DataKey::EventSeq, EVENTSEQ_TTL_THRESHOLD, EVENTSEQ_TTL_BUMP);
     }
 
     /// Transfer admin rights to a new address.
@@ -180,7 +187,7 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::Unauthorized);
         }
 
-        let seq: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let seq: u64 = env.storage().persistent().get(&DataKey::EventSeq).unwrap_or(0);
         let event = DecodedEvent {
             seq,
             contract_id: contract_id.clone(),
@@ -191,7 +198,9 @@ impl ExplorerContract {
             raw_data,
         };
         env.storage().persistent().set(&DataKey::EventLog(seq), &event);
-        env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
+        env.storage().persistent().extend_ttl(&DataKey::EventLog(seq), EVENTSEQ_TTL_THRESHOLD, EVENTSEQ_TTL_BUMP);
+        env.storage().persistent().set(&DataKey::EventSeq, &(seq + 1));
+        env.storage().persistent().extend_ttl(&DataKey::EventSeq, EVENTSEQ_TTL_THRESHOLD, EVENTSEQ_TTL_BUMP);
 
         env.events().publish(
             (symbol_short!("decoded"), contract_id, function),
@@ -208,12 +217,12 @@ impl ExplorerContract {
 
     /// Return the total number of stored events.
     pub fn event_count(env: Env) -> u64 {
-        env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0)
+        env.storage().persistent().get(&DataKey::EventSeq).unwrap_or(0)
     }
 
     /// Fetch a page of events [from, from+limit).
     pub fn get_events(env: Env, from: u64, limit: u32) -> Vec<DecodedEvent> {
-        let total: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
+        let total: u64 = env.storage().persistent().get(&DataKey::EventSeq).unwrap_or(0);
         let mut out: Vec<DecodedEvent> = Vec::new(&env);
         let end = (from + limit as u64).min(total);
         for seq in from..end {
