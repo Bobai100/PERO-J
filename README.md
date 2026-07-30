@@ -106,13 +106,20 @@ make dev
 |----------|-------------|
 | `init(admin)` | Initialise contract with admin address |
 | `transfer_admin(current_admin, new_admin)` | Transfer admin rights; both parties must sign |
+| `add_indexer(admin, indexer)` | Allowlist a hot wallet as a trusted event submitter (max 20) |
+| `remove_indexer(admin, indexer)` | Revoke a previously allowlisted indexer |
+| `get_indexers()` | List allowlisted indexer addresses |
+| `is_indexer(address)` | Whether an address may submit events (admin or allowlisted) |
 | `register_contract(caller, contract_id, meta)` | Register ABI metadata for a contract |
-| `update_contract(caller, contract_id, meta)` | Update metadata (admin or registrant) |
+| `update_contract(caller, contract_id, meta)` | Update metadata (admin or registrant); emits `update` |
 | `get_contract(contract_id)` | Fetch contract metadata |
-| `submit_event(...)` | Persist a decoded event (admin only) |
+| `submit_event(...)` | Persist a decoded event (admin or allowlisted indexer) |
 | `get_event(seq)` | Fetch event by sequence number |
-| `get_events(from, limit)` | Paginated event list |
+| `get_events(from, limit)` | Paginated event list; `limit` capped at 200 |
 | `event_count()` | Total stored events |
+
+Events emitted: `register`, `update`, `decoded`, `adm_xfr`, `idx_add`, `idx_rm`.
+The `update` topic lets the indexer invalidate its ABI cache without polling storage.
 
 ---
 

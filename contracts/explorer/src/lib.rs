@@ -1,18 +1,19 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
-    Address, Bytes, BytesN, Env, Map, String, Symbol, Vec,
-    log, panic_with_error,
+    contract, contracterror, contractimpl, contracttype, symbol_short,
+    Address, Bytes, BytesN, Env, String, Symbol, Vec,
+    panic_with_error,
 };
 
 // ── Error codes ──────────────────────────────────────────────────────────────
-#[contracttype]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
-    NotFound      = 1,
-    Unauthorized  = 2,
-    AlreadyExists = 3,
+    NotFound       = 1,
+    Unauthorized   = 2,
+    AlreadyExists  = 3,
+    LimitExceeded  = 4,
 }
 
 // ── Storage keys ─────────────────────────────────────────────────────────────
@@ -22,7 +23,24 @@ pub enum DataKey {
     Contract(BytesN<32>),   // contract_id → ContractMeta
     EventLog(u64),          // seq → DecodedEvent
     EventSeq,
+    IndexerAllowlist,       // → Vec<Address> of trusted event submitters
 }
+
+// ── Limits & TTL ──────────────────────────────────────────────────────────────
+
+/// Maximum number of events `get_events` will read in a single call.
+/// Guards against a caller passing a huge `limit` and exhausting the host's
+/// CPU-instruction budget.
+pub const MAX_PAGE: u32 = 200;
+
+/// Maximum number of addresses that may sit on the indexer allowlist.
+pub const MAX_INDEXERS: u32 = 20;
+
+const DAY_IN_LEDGERS: u32 = 17_280;
+/// Extend an entry whenever its remaining TTL drops below 30 days …
+const TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
+/// … and bump it back out to 90 days.
+const TTL_EXTEND_TO: u32 = 90 * DAY_IN_LEDGERS;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -70,18 +88,68 @@ pub struct DecodedEvent {
 #[contract]
 pub struct ExplorerContract;
 
+// Internal helpers — deliberately outside `#[contractimpl]` so they are not
+// exported as contract entry points.
+impl ExplorerContract {
+    /// Read the admin address from *persistent* storage.
+    ///
+    /// The admin lives in persistent storage (never instance storage) so that an
+    /// expired instance entry can never make the contract look uninitialised.
+    fn admin(env: &Env) -> Address {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(env, Error::NotFound))
+    }
+
+    /// Bump the TTL of the instance entry and of the admin entry.
+    ///
+    /// Called from every mutating entry point so that an active contract can
+    /// never let its state — in particular the `Admin` guard used by `init` —
+    /// lapse and become re-writable.
+    fn bump_ttl(env: &Env) {
+        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        if env.storage().persistent().has(&DataKey::Admin) {
+            env.storage()
+                .persistent()
+                .extend_ttl(&DataKey::Admin, TTL_THRESHOLD, TTL_EXTEND_TO);
+        }
+    }
+
+    /// Panic unless `caller` is the admin or sits on the indexer allowlist.
+    fn require_submitter(env: &Env, caller: &Address) {
+        if *caller == Self::admin(env) {
+            return;
+        }
+        let allowlist: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::IndexerAllowlist)
+            .unwrap_or_else(|| Vec::new(env));
+        if !allowlist.contains(caller) {
+            panic_with_error!(env, Error::Unauthorized);
+        }
+    }
+}
+
 #[contractimpl]
 impl ExplorerContract {
 
     // ── Admin ─────────────────────────────────────────────────────────────────
 
     /// Initialise with an admin address (call once).
+    ///
+    /// The `Admin` marker is written to **persistent** storage: instance storage
+    /// has a TTL, and if it lapsed an attacker could call `init` again and take
+    /// over the contract.  Persistent entries can be archived but never silently
+    /// disappear, so this guard is permanent.
     pub fn init(env: Env, admin: Address) {
-        if env.storage().instance().has(&DataKey::Admin) {
+        if env.storage().persistent().has(&DataKey::Admin) {
             panic_with_error!(&env, Error::AlreadyExists);
         }
-        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().persistent().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::EventSeq, &0u64);
+        Self::bump_ttl(&env);
     }
 
     /// Transfer admin rights to a new address.
@@ -97,19 +165,90 @@ impl ExplorerContract {
         current_admin.require_auth();
         new_admin.require_auth();
 
-        let stored: Address = env.storage().instance()
-            .get(&DataKey::Admin)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
+        let stored = Self::admin(&env);
 
         if current_admin != stored {
             panic_with_error!(&env, Error::Unauthorized);
         }
 
-        env.storage().instance().set(&DataKey::Admin, &new_admin);
+        env.storage().persistent().set(&DataKey::Admin, &new_admin);
+        Self::bump_ttl(&env);
         env.events().publish(
             (symbol_short!("adm_xfr"),),
             (current_admin, new_admin),
         );
+    }
+
+    // ── Indexer allowlist ─────────────────────────────────────────────────────
+
+    /// Whitelist `indexer` as a trusted event submitter.
+    ///
+    /// In production the indexer runs as a hot wallet that must be able to call
+    /// `submit_event` without holding the (cold) admin key.
+    pub fn add_indexer(env: Env, admin: Address, indexer: Address) {
+        admin.require_auth();
+        if admin != Self::admin(&env) {
+            panic_with_error!(&env, Error::Unauthorized);
+        }
+
+        let mut allowlist: Vec<Address> = env.storage().persistent()
+            .get(&DataKey::IndexerAllowlist)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        if allowlist.contains(&indexer) {
+            panic_with_error!(&env, Error::AlreadyExists);
+        }
+        if allowlist.len() >= MAX_INDEXERS {
+            panic_with_error!(&env, Error::LimitExceeded);
+        }
+
+        allowlist.push_back(indexer.clone());
+        env.storage().persistent().set(&DataKey::IndexerAllowlist, &allowlist);
+        Self::bump_ttl(&env);
+        env.storage().persistent().extend_ttl(
+            &DataKey::IndexerAllowlist, TTL_THRESHOLD, TTL_EXTEND_TO,
+        );
+
+        env.events().publish((symbol_short!("idx_add"),), indexer);
+    }
+
+    /// Revoke a previously whitelisted indexer.
+    pub fn remove_indexer(env: Env, admin: Address, indexer: Address) {
+        admin.require_auth();
+        if admin != Self::admin(&env) {
+            panic_with_error!(&env, Error::Unauthorized);
+        }
+
+        let mut allowlist: Vec<Address> = env.storage().persistent()
+            .get(&DataKey::IndexerAllowlist)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let idx = allowlist
+            .first_index_of(&indexer)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
+
+        allowlist.remove(idx);
+        env.storage().persistent().set(&DataKey::IndexerAllowlist, &allowlist);
+        Self::bump_ttl(&env);
+
+        env.events().publish((symbol_short!("idx_rm"),), indexer);
+    }
+
+    /// List every address currently allowed to submit events (excluding admin).
+    pub fn get_indexers(env: Env) -> Vec<Address> {
+        env.storage().persistent()
+            .get(&DataKey::IndexerAllowlist)
+            .unwrap_or_else(|| Vec::new(&env))
+    }
+
+    /// True if `address` may call `submit_event` (admin or allowlisted indexer).
+    pub fn is_indexer(env: Env, address: Address) -> bool {
+        let allowlist: Vec<Address> = env.storage().persistent()
+            .get(&DataKey::IndexerAllowlist)
+            .unwrap_or_else(|| Vec::new(&env));
+        allowlist.contains(&address)
+            || env.storage().persistent().get::<_, Address>(&DataKey::Admin)
+                  .map_or(false, |a| a == address)
     }
 
     // ── Contract Registry ─────────────────────────────────────────────────────
@@ -127,6 +266,7 @@ impl ExplorerContract {
             panic_with_error!(&env, Error::AlreadyExists);
         }
         env.storage().persistent().set(&key, &meta);
+        Self::bump_ttl(&env);
         env.events().publish(
             (symbol_short!("register"), contract_id),
             meta.name,
@@ -145,11 +285,19 @@ impl ExplorerContract {
         let existing: ContractMeta = env.storage().persistent()
             .get(&key).unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
 
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        let admin = Self::admin(&env);
         if caller != existing.registered_by && caller != admin {
             panic_with_error!(&env, Error::Unauthorized);
         }
         env.storage().persistent().set(&key, &meta);
+        Self::bump_ttl(&env);
+
+        // Emitted so the indexer can invalidate its in-memory ABI cache instead
+        // of polling storage for metadata revisions.
+        env.events().publish(
+            (symbol_short!("update"), contract_id),
+            meta.name,
+        );
     }
 
     /// Fetch metadata for a contract.
@@ -174,11 +322,8 @@ impl ExplorerContract {
         raw_data:    Bytes,
     ) {
         caller.require_auth();
-        // Only admin or registered indexers may submit events.
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        if caller != admin {
-            panic_with_error!(&env, Error::Unauthorized);
-        }
+        // Only the admin or an allowlisted indexer may submit events.
+        Self::require_submitter(&env, &caller);
 
         let seq: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
         let event = DecodedEvent {
@@ -192,6 +337,7 @@ impl ExplorerContract {
         };
         env.storage().persistent().set(&DataKey::EventLog(seq), &event);
         env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
+        Self::bump_ttl(&env);
 
         env.events().publish(
             (symbol_short!("decoded"), contract_id, function),
@@ -211,11 +357,17 @@ impl ExplorerContract {
         env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0)
     }
 
-    /// Fetch a page of events [from, from+limit).
+    /// Fetch a page of events `[from, from+limit)`.
+    ///
+    /// `limit` is capped at [`MAX_PAGE`]; a larger value panics rather than
+    /// burning the whole transaction's CPU budget on storage reads.
     pub fn get_events(env: Env, from: u64, limit: u32) -> Vec<DecodedEvent> {
+        if limit > MAX_PAGE {
+            panic_with_error!(&env, Error::LimitExceeded);
+        }
         let total: u64 = env.storage().instance().get(&DataKey::EventSeq).unwrap_or(0);
         let mut out: Vec<DecodedEvent> = Vec::new(&env);
-        let end = (from + limit as u64).min(total);
+        let end = from.saturating_add(limit as u64).min(total);
         for seq in from..end {
             if let Some(ev) = env.storage().persistent().get(&DataKey::EventLog(seq)) {
                 out.push_back(ev);
@@ -229,7 +381,10 @@ impl ExplorerContract {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Env};
+    use soroban_sdk::{
+        testutils::{storage::Instance as _, Address as _, Events as _, Ledger as _},
+        Env, IntoVal, TryFromVal,
+    };
 
     fn setup() -> (Env, ExplorerContractClient<'static>) {
         let env = Env::default();
@@ -321,5 +476,172 @@ mod tests {
         client.init(&admin);
         // attacker tries to hijack admin — must panic
         client.transfer_admin(&attacker, &attacker);
+    }
+
+    // ── #1 — init is permanently irreversible ────────────────────────────────
+
+    /// The admin guard must not live in instance storage.
+    ///
+    /// Wiping the instance `Admin` slot models the entry lapsing; a second
+    /// `init` still has to fail because the real guard is persistent.  Against
+    /// the old instance-storage implementation this test fails: `init` would
+    /// succeed and hand the contract to `attacker`.
+    #[test]
+    #[should_panic(expected = "Error(Contract, #3)")]
+    fn test_init_is_irreversible_without_instance_entry() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let id = env.register_contract(None, ExplorerContract);
+        let client = ExplorerContractClient::new(&env, &id);
+
+        let admin    = Address::generate(&env);
+        let attacker = Address::generate(&env);
+        client.init(&admin);
+
+        env.as_contract(&id, || {
+            env.storage().instance().remove(&DataKey::Admin);
+        });
+
+        client.init(&attacker); // must still panic — admin is persistent
+    }
+
+    /// Every mutating entry point bumps the instance TTL, so an actively used
+    /// contract never lets its state lapse in the first place.
+    #[test]
+    fn test_mutating_calls_bump_ttl() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let start = env.ledger().sequence();
+        env.ledger().with_mut(|l| l.sequence_number = start + 100_000);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[4u8; 32]);
+        client.submit_event(
+            &admin,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "keeps the instance alive"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+
+        // TTL was pushed well past the 30-day bump threshold.
+        let ttl = env.as_contract(&client.address, || env.storage().instance().get_ttl());
+        assert!(ttl >= TTL_THRESHOLD, "instance ttl {} not bumped", ttl);
+    }
+
+    // ── #2 — indexer allowlist ───────────────────────────────────────────────
+
+    #[test]
+    fn test_allowlisted_indexer_can_submit() {
+        let (env, client) = setup();
+        let admin   = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        assert!(client.is_indexer(&indexer));
+        assert_eq!(client.get_indexers().len(), 1);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[7u8; 32]);
+        client.submit_event(
+            &indexer,
+            &cid,
+            &symbol_short!("swap"),
+            &42u32,
+            &String::from_str(&env, "indexer submitted"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+        assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_removed_indexer_cannot_submit() {
+        let (env, client) = setup();
+        let admin   = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+        client.remove_indexer(&admin, &indexer);
+        assert!(!client.is_indexer(&indexer));
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[8u8; 32]);
+        client.submit_event(
+            &indexer,
+            &cid,
+            &symbol_short!("swap"),
+            &1u32,
+            &String::from_str(&env, "should fail"),
+            &Vec::new(&env),
+            &Bytes::new(&env),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_non_admin_cannot_add_indexer() {
+        let (env, client) = setup();
+        let admin    = Address::generate(&env);
+        let attacker = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&attacker, &attacker);
+    }
+
+    // ── #3 — get_events page cap ─────────────────────────────────────────────
+
+    #[test]
+    #[should_panic]
+    fn test_get_events_rejects_oversized_limit() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+        client.get_events(&0u64, &u32::MAX);
+    }
+
+    #[test]
+    fn test_get_events_accepts_max_page() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+        assert_eq!(client.get_events(&0u64, &MAX_PAGE).len(), 0);
+    }
+
+    // ── #4 — update_contract emits an event ──────────────────────────────────
+
+    #[test]
+    fn test_update_contract_emits_event() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[9u8; 32]);
+        let meta = ContractMeta {
+            name: String::from_str(&env, "StellarSwap"),
+            description: String::from_str(&env, "DEX on Stellar"),
+            functions: Vec::new(&env),
+            registered_by: admin.clone(),
+        };
+        client.register_contract(&admin, &cid, &meta);
+
+        let updated = ContractMeta {
+            name: String::from_str(&env, "StellarSwap v2"),
+            ..meta
+        };
+        client.update_contract(&admin, &cid, &updated);
+
+        let (_, topics, data) = env.events().all().last().unwrap();
+        assert_eq!(
+            topics,
+            (symbol_short!("update"), cid.clone()).into_val(&env),
+        );
+        assert_eq!(
+            String::try_from_val(&env, &data).unwrap(),
+            String::from_str(&env, "StellarSwap v2"),
+        );
+        assert_eq!(client.get_contract(&cid).name, String::from_str(&env, "StellarSwap v2"));
     }
 }
