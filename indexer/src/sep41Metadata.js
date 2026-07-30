@@ -18,11 +18,14 @@ const RPC_URL = process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.
 const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET;
 // Dummy source account — simulation never submits, so balance doesn't matter.
 // Note: The dummy account must exist on the target network, or configure process.env.OPERATIONAL_ACCOUNT.
-const DUMMY_SOURCE = process.env.OPERATIONAL_ACCOUNT || "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+const DUMMY_SOURCE =
+  process.env.OPERATIONAL_ACCOUNT || "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
 
 const rpc = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
+const METADATA_CACHE_TTL_MS = 60 * 60 * 1000;
 
 const contractCache = new Map();
+const metadataCache = new Map();
 
 function getContract(contractId) {
   if (!contractCache.has(contractId)) {
@@ -30,8 +33,6 @@ function getContract(contractId) {
   }
   return contractCache.get(contractId);
 }
-
-const dummyAccount = new Account(DUMMY_SOURCE, "0");
 
 /**
  * Simulate a no-arg contract call and return the native ScVal result.
@@ -41,7 +42,7 @@ const dummyAccount = new Account(DUMMY_SOURCE, "0");
  */
 async function simulateCall(contractId, method, sequence = "0") {
   const account = new Account(DUMMY_SOURCE, sequence);
-  const contract = new Contract(contractId);
+  const contract = getContract(contractId);
   const tx = new TransactionBuilder(account, {
     fee: "100",
     networkPassphrase: NETWORK_PASSPHRASE,
@@ -52,8 +53,13 @@ async function simulateCall(contractId, method, sequence = "0") {
 
   const result = await rpc.simulateTransaction(tx);
   if (SorobanRpc.Api.isSimulationError(result)) {
-    const errorStr = typeof result.error === "string" ? result.error : JSON.stringify(result.error || "");
-    if (sequence === "0" && (errorStr.includes("sourceAccountNotFound") || errorStr.toLowerCase().includes("source account not found"))) {
+    const errorStr =
+      typeof result.error === "string" ? result.error : JSON.stringify(result.error || "");
+    if (
+      sequence === "0" &&
+      (errorStr.includes("sourceAccountNotFound") ||
+        errorStr.toLowerCase().includes("source account not found"))
+    ) {
       return simulateCall(contractId, method, "1");
     }
     throw new Error(`simulate ${method} failed: ${result.error}`);
@@ -68,16 +74,25 @@ async function simulateCall(contractId, method, sequence = "0") {
  * @returns {Promise<{ name: string, symbol: string, decimals: number }>}
  */
 export async function fetchTokenMetadata(contractId) {
-  const contract = getContract(contractId);
+  const cached = metadataCache.get(contractId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
   const [name, symbol, decimals] = await Promise.all([
-    simulateCall(contract, "name"),
-    simulateCall(contract, "symbol"),
-    simulateCall(contract, "decimals"),
+    simulateCall(contractId, "name"),
+    simulateCall(contractId, "symbol"),
+    simulateCall(contractId, "decimals"),
   ]);
 
-  return {
+  const metadata = {
     name: String(name ?? ""),
     symbol: String(symbol ?? ""),
     decimals: Number(decimals ?? 7),
   };
+  metadataCache.set(contractId, {
+    value: metadata,
+    expiresAt: Date.now() + METADATA_CACHE_TTL_MS,
+  });
+  return metadata;
 }

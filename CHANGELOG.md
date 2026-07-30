@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
+
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
 
 - Resolve issues [#70](../../issues/70), [#71](../../issues/71), [#72](../../issues/72), and [#73](../../issues/73) in indexer service ([`0a97e3f`](../../commit/0a97e3f9c87f346c2f7087c1caf641a39a47245a))
@@ -118,6 +120,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`4c6fcf4`](../../commit/4c6fcf4402649059fa993750584eac43dbcd7187))
 
 - Auto-update CHANGELOG.md [skip ci] ([`b031ae7`](../../commit/b031ae7d10100b2a0e2bb5d4ae558d28d2965481))
 
