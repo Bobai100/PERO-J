@@ -115,6 +115,24 @@ scvLedgerKeyContractInstance, scvLedgerKeyNonce, and scvContractInstance
   variants and the join-into-description scenario
 
 
+- Bound caller-supplied payloads, add get_admin, harden event counter ([`280bd83`](../../commit/280bd83d5e678d50c71cf91e4dbd15d51d4c5ffc))
+
+- submit_event rejects raw_data larger than MAX_RAW_DATA_BYTES (4096) before
+    touching storage, so a single call cannot bloat on-chain state ([#7](../../issues/7))
+  - add get_admin() view so off-chain tooling can read the admin without
+    guessing the DataKey encoding ([#10](../../issues/10))
+  - event_count()/get_events() now read the sequence counter through a helper
+    that panics with NotInitialized instead of collapsing a missing counter
+    into a misleading 0 ([#11](../../issues/11))
+  - register_contract()/update_contract() reject ABI metadata above
+    MAX_FUNCTIONS (64) or MAX_PARAMS (32) per function ([#12](../../issues/12))
+
+  Also fixes two pre-existing build blockers that made the crate impossible to
+  compile or test: Error carried #[contracttype] instead of #[contracterror]
+  (so panic_with_error! never type-checked), and the lockfile resolved
+  ed25519-dalek to 3.0.0, which soroban-env-host (">=2.0.0") cannot build against
+
+
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
@@ -227,6 +245,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`75074c9`](../../commit/75074c9a7160fcddaa5f8adc1d25ae11946c5ef1))
 
 - Auto-update CHANGELOG.md [skip ci] ([`ada6b96`](../../commit/ada6b962732d5808ce0350f76055574f64a4d03e))
 
