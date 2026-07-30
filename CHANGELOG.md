@@ -8,6 +8,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
+
+Closes [#1](../../issues/1), [#2](../../issues/2), [#3](../../issues/3), [#4](../../issues/4).
+
+  [#1](../../issues/1) init() could be replayed if the instance entry expired. The Admin guard
+  now lives in persistent storage, and every mutating entry point calls
+  bump_ttl() so an active contract never lets its state lapse.
+
+  [#2](../../issues/2) submit_event() only accepted the single admin address, forcing the
+  indexer hot wallet to hold the cold admin key. Adds a persistent
+  IndexerAllowlist (Vec<Address>, capped at MAX_INDEXERS = 20) with
+  add_indexer/remove_indexer admin functions plus get_indexers/is_indexer
+  readers; submit_event now accepts the admin or any allowlisted address.
+
+  [#3](../../issues/3) get_events() accepted a raw u32 limit and would iterate until the host
+  ran out of CPU instructions. Rejects limit > MAX_PAGE (200) with
+  Error::LimitExceeded, and the end-offset computation is now saturating.
+
+  [#4](../../issues/4) update_contract() was silent, so the indexer could not invalidate its
+  ABI cache without polling. It now publishes ("update", contract_id) ->
+  meta.name, mirroring register_contract.
+
+  Two pre-existing build breakages had to be fixed for any of this to
+  compile or run in CI:
+  - Error was declared #[contracttype] rather than #[contracterror], so
+    every panic_with_error! failed to typecheck and the crate did not build.
+  - Cargo.lock resolved soroban-env-host 21.2.1 against ed25519-dalek 3.0.0,
+    which it does not support; pinned back to 2.2.0.
+
+  13 unit tests pass, including a regression test for [#1](../../issues/1) that fails against
+  the old instance-storage implementation
+
+
 - Add database backup strategy ([#106](../../issues/106)) ([`ecd0c8f`](../../commit/ecd0c8f9b30750147e55230e550aca6dd412daf0))
 
 - Add scripts/backup.sh using pg_dump with configurable env vars
@@ -194,6 +227,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`ada6b96`](../../commit/ada6b962732d5808ce0350f76055574f64a4d03e))
 
 - Auto-update CHANGELOG.md [skip ci] ([`2b5bd65`](../../commit/2b5bd65f45eb55ef5534d7bf951e345dc508960e))
 
