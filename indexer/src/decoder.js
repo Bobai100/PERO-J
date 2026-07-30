@@ -26,7 +26,7 @@ const contractMetaCache = new LRUCache({
  */
 export async function decode(ev) {
   const contractId = ev.contractId;
-  const topics = ev.topic.map((t) => scValToNative(t));
+  const topics = ev.topic.map((t, index) => decodeTopic(t, ev, index));
   const data = scValToNative(ev.value);
 
   // First topic is typically the function name symbol
@@ -63,6 +63,30 @@ export async function decode(ev) {
     event_addresses: eventAddresses,
     ...(isSac && { sac_asset: assetCode }),
   };
+}
+
+function decodeTopic(topic, ev, index) {
+  try {
+    return scValToNative(topic);
+  } catch (err) {
+    console.warn("Topic decode error:", {
+      contractId: ev.contractId,
+      ledger: ev.ledger,
+      txHash: ev.txHash,
+      topicIndex: index,
+      rawTopic: topicToBase64(topic),
+      error: err?.message ?? String(err),
+    });
+    return "<decode_error>";
+  }
+}
+
+function topicToBase64(topic) {
+  try {
+    return typeof topic?.toXDR === "function" ? topic.toXDR("base64") : String(topic);
+  } catch {
+    return "<unserializable_topic>";
+  }
 }
 
 /**
