@@ -147,6 +147,21 @@ Issue [#16](../../issues/16): emit (abi_cleared, contract_id) event in update_co
   - test_get_events_from_last_returns_one  (from=total-1, limit=100)
 
 
+- Move EventSeq to persistent storage to prevent seq reset on TTL expiry ([`10dbbfc`](../../commit/10dbbfc05d7d8dfe6614a51d332436d2af032252))
+
+Instance storage has a short TTL; if it expires, EventSeq would fall back
+  to 0 via unwrap_or(0) and new events would silently overwrite existing ones
+  in persistent storage starting from seq 0.
+
+  Fix by storing EventSeq in persistent storage alongside EventLog entries,
+  and calling extend_ttl on both EventSeq and each EventLog entry every time
+  submit_event is called. Two TTL constants are introduced:
+    - EVENTSEQ_TTL_THRESHOLD (17_280 ledgers ≈ 1 day)  — only bump when below
+    - EVENTSEQ_TTL_BUMP      (518_400 ledgers ≈ 30 days) — target TTL
+
+  Closes [#17](../../issues/17)
+
+
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
@@ -259,6 +274,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`033f7a3`](../../commit/033f7a32e9fa2c8ac9d72684d344e08a1c1f964b))
 
 - Auto-update CHANGELOG.md [skip ci] ([`914c72f`](../../commit/914c72ffe79395ea47f8fd2965ea1900e9c1f510))
 
