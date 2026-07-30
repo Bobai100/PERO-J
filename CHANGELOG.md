@@ -181,6 +181,10 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Document GET /api/tokens/:id/volume and add decimals param ([`b512953`](../../commit/b5129536d0e0108978c33c1d93f53dae4ecbce8c))
+
+- Auto-update CHANGELOG.md [skip ci] ([`0ff82b0`](../../commit/0ff82b0afa73997fface376a6441959c44ac7560))
+
 - Auto-update CHANGELOG.md [skip ci] ([`8a5ef83`](../../commit/8a5ef8389fca5e8ec39a134e68bc9f3077fd2ddc))
 
 - Auto-update CHANGELOG.md [skip ci] ([`3846d59`](../../commit/3846d5983235a147141d0b7341965b12303bb9ff))
