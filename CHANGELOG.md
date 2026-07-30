@@ -195,6 +195,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`2b5bd65`](../../commit/2b5bd65f45eb55ef5534d7bf951e345dc508960e))
+
 - Auto-update CHANGELOG.md [skip ci] ([`ce0cc39`](../../commit/ce0cc3991e752b191d69dc4091f8319076736068))
 
 - Auto-update CHANGELOG.md [skip ci] ([`aeb2d39`](../../commit/aeb2d3966824bee99844d95bc2502022cb190f4e))
@@ -291,6 +293,15 @@ Adds a tests/e2e/ directory with Playwright-based E2E tests that:
   - CI job in ci.yml             — Full E2E on PR/push to main
 
   closes [#109](../../issues/109)
+
+
+- Add database backup script and documentation ([`aeb57d5`](../../commit/aeb57d5ed4f50e45ad3fb210f3fd7052d7108286))
+
+Add automated PostgreSQL backup via scripts/backup.sh using pg_dump
+  with configurable retention. Document daily cron job, restore
+  procedure, and cloud deployment backup options (RDS, Cloud SQL).
+
+  Closes [#106](../../issues/106)
 
 
 - Add CI pipeline, Docker Compose infrastructure, and frontend containerization ([`99a233a`](../../commit/99a233a5e5a70cf17f53f05e8a956393bf6b048c))
