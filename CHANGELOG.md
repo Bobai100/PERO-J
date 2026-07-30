@@ -8,6 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Redact sensitive args and truncate to 64 chars in genericDescription ([#29](../../issues/29)) ([`852cb12`](../../commit/852cb12ef7522bfc20e79275e5ef304014717d86))
+
+- Add isSensitive() helper that flags:
+    * 56-char G-prefixed strings that are not valid strkeys
+    * Raw hex blobs of 64+ chars (32+ byte nonces/keys)
+    * Base64 blobs of 44+ chars (32-byte secrets)
+  - Add sanitiseArg() that redacts sensitive values with [REDACTED]
+    and truncates any value > 64 chars to 'first…last' form
+  - genericDescription now maps args through sanitiseArg instead of
+    String(), preventing private data from leaking into PostgreSQL
+    and the public API
+
+  Closes [#29](../../issues/29)
+
+
 - Reload SAC map on SIGHUP signal ([#34](../../issues/34)) ([`2640006`](../../commit/264000636ba52fdffae2ebffd1b344a2169bf229))
 
 - Clamp scvI128/scvI256 bit-shifting to signed range ([#33](../../issues/33)) ([`8fe5111`](../../commit/8fe51110357b58c743084a5f97f78550e7651cbf))
@@ -140,6 +155,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`f7201b3`](../../commit/f7201b383ce7af4f9288e5087d3bd72113a40868))
 
 - Auto-update CHANGELOG.md [skip ci] ([`2dc0400`](../../commit/2dc0400a37bd7dd94418273a2ae1abd86dd27cf5))
 
