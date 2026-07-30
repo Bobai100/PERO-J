@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add database backup strategy ([#106](../../issues/106)) ([`ecd0c8f`](../../commit/ecd0c8f9b30750147e55230e550aca6dd412daf0))
+
+- Add scripts/backup.sh using pg_dump with configurable env vars
+  - Document cron job: 0 2 * * * backup.sh >> /var/log/backup.log 2>&1
+  - Document restore procedure in README.md
+  - Document cloud deployment backups (RDS, Cloud SQL, Supabase, Neon)
+  - Update ROADMAP Tranche 3 deliverable 3.2 to reflect implementation
+  - Add PR_DESCRIPTION.md with detailed description closing [#106](../../issues/106)
+
+  closes [#106](../../issues/106)
+
+
 - Log malformed SAC_ASSETS entries and startup asset count ([`c88a102`](../../commit/c88a10289345f382fee9a7c81a5438698fcbffb5))
 
 - Resolve frontend CI failures ([`3f89ce9`](../../commit/3f89ce9d7c66e2ab70f5ffcf8c3e8ec63053c05e))
@@ -182,6 +194,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`ce0cc39`](../../commit/ce0cc3991e752b191d69dc4091f8319076736068))
 
 - Auto-update CHANGELOG.md [skip ci] ([`aeb2d39`](../../commit/aeb2d3966824bee99844d95bc2502022cb190f4e))
 
