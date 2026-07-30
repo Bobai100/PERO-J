@@ -277,6 +277,72 @@ The decoder recognises SEP-41 token events (`transfer`, `mint`, `burn`) and form
 
 ---
 
+## Database Backup
+
+Automated backups protect all decoded event history and registered ABI metadata stored in PostgreSQL.
+
+### Local Backup Script
+
+`scripts/backup.sh` uses `pg_dump` to produce a plain-text SQL dump of the `soroban_explorer` database.
+
+```bash
+./scripts/backup.sh
+```
+
+Environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PGHOST` | `localhost` | PostgreSQL host |
+| `PGPORT` | `5432` | PostgreSQL port |
+| `PGUSER` | `user` | PostgreSQL user |
+| `PGDATABASE` | `soroban_explorer` | Database name |
+| `PGPASSWORD` | (from env) | PostgreSQL password |
+| `BACKUP_DIR` | `./backups` | Directory for dump files |
+| `LOG_FILE` | `./logs/backup.log` | Backup log path |
+
+### Automated Cron Job
+
+Schedule daily backups at 02:00 UTC:
+
+```cron
+0 2 * * * /workspaces/PERO-J/scripts/backup.sh >> /var/log/backup.log 2>&1
+```
+
+Or deploy with a systemd timer, Docker cron, or your platform's scheduled task scheduler.
+
+### Restore Procedure
+
+To restore a backup into PostgreSQL:
+
+```bash
+# Stop the indexer to avoid data inconsistency
+# Then pipe the dump into psql:
+psql -h <host> -U <user> -d <database> -f backups/soroban_explorer_<timestamp>.sql
+```
+
+Or restore to a new database for verification:
+
+```bash
+createdb -h <host> -U <user> soroban_explorer_restore
+psql -h <host> -U <user> -d soroban_explorer_restore -f backups/soroban_explorer_<timestamp>.sql
+```
+
+### Cloud Deployments
+
+For cloud-hosted PostgreSQL, enable automated backups via the managed service:
+
+| Platform | Setting |
+|----------|---------|
+| **AWS RDS** | Enable automated backups in the RDS instance configuration; set backup retention period (recommended: 7+ days). Use snapshots for point-in-time recovery. |
+| **Google Cloud SQL** | Enable automated backups in the instance settings; set backup start time and retention period. Use scheduled exports to Cloud Storage for additional safety. |
+| **Supabase** | Dashboard > Project Settings > Database > Backups. Enable daily automatic backups. |
+| **Neon** | Dashboard > Settings > Branches & Backups. Configure branch protection and auto-backup retention. |
+
+For any cloud provider, also export a `pg_dump` weekly to object storage (S3, GCS) as an offsite copy.
+
+---
+
 ## Contributing
 
 PRs welcome. Please open an issue first for large changes.
