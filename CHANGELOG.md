@@ -34,6 +34,17 @@ Issue 1: Replace kind: Symbol with kind: ParamKind enum (Address, I128,
   (30 days) and EVENT_TTL_MAX (365 days) to prevent silent eviction
 
 
+- Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`5865047`](../../commit/5865047d0c3b4088db2b72dd3e882696311c6242))
+
+- Pin soroban-sdk to =21.7.7 in contracts/explorer/Cargo.toml
+  - Update workspace Cargo.toml to match
+  - Regenerate Cargo.lock to resolve ed25519-dalek compatibility
+  - Use #[contracterror] for Error enum (required by soroban-sdk v21.7.7)
+  - Remove unused imports Map and log
+
+  Closes [#19](../../issues/19)
+
+
 - Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`3e1e59d`](../../commit/3e1e59d5dc06771e0820eabce39f03bdc08921b8))
 
 - Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
@@ -188,17 +199,6 @@ Instance storage has a short TTL; if it expires, EventSeq would fall back
   Closes [#17](../../issues/17)
 
 
-- Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`5865047`](../../commit/5865047d0c3b4088db2b72dd3e882696311c6242))
-
-- Pin soroban-sdk to =21.7.7 in contracts/explorer/Cargo.toml
-  - Update workspace Cargo.toml to match
-  - Regenerate Cargo.lock to resolve ed25519-dalek compatibility
-  - Use #[contracterror] for Error enum (required by soroban-sdk v21.7.7)
-  - Remove unused imports Map and log
-
-  Closes [#19](../../issues/19)
-
-
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
@@ -312,6 +312,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`9cf9faa`](../../commit/9cf9faaa97fec34e7f532a865068f790452202d4))
+
 - Auto-update CHANGELOG.md [skip ci] ([`2fd76c7`](../../commit/2fd76c7a0872682e768bb06d0b511a06a1370243))
 
 - Auto-update CHANGELOG.md [skip ci] ([`81b919d`](../../commit/81b919d7152ed35210cd6f6d23056738ddf76cfc))
@@ -403,6 +405,16 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Features
 
+- Expose list of all registered contract IDs ([`86853e7`](../../commit/86853e7234fed2f523b18b6435f9f021f320660d))
+
+- Add DataKey::ContractList to store Vec<BytesN<32>> of registered contracts
+  - Append contract ID to list on every register_contract call
+  - Add get_contracts() function to return all registered IDs
+  - Add test_get_contracts_lists_registered_ids test
+
+  Closes [#18](../../issues/18)
+
+
 - Add end-to-end tests verifying full pipeline (contract → indexer → API → frontend) ([`b774907`](../../commit/b774907e44bc12dfc98166ccb479dac83c91db7a))
 
 Adds a tests/e2e/ directory with Playwright-based E2E tests that:
@@ -439,16 +451,6 @@ Add automated PostgreSQL backup via scripts/backup.sh using pg_dump
   procedure, and cloud deployment backup options (RDS, Cloud SQL).
 
   Closes [#106](../../issues/106)
-
-
-- Expose list of all registered contract IDs ([`86853e7`](../../commit/86853e7234fed2f523b18b6435f9f021f320660d))
-
-- Add DataKey::ContractList to store Vec<BytesN<32>> of registered contracts
-  - Append contract ID to list on every register_contract call
-  - Add get_contracts() function to return all registered IDs
-  - Add test_get_contracts_lists_registered_ids test
-
-  Closes [#18](../../issues/18)
 
 
 - Add CI pipeline, Docker Compose infrastructure, and frontend containerization ([`99a233a`](../../commit/99a233a5e5a70cf17f53f05e8a956393bf6b048c))
