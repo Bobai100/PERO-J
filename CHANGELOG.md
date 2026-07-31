@@ -8,6 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Reorder submit_event publish-before-write and add auth tests ([`cf0a281`](../../commit/cf0a28156f84d8a642d3b6dc9266a67961744188))
+
+Issue 1 (auth tests): Add three tests that call env.set_auths(&[]) to
+  strip all authorisations and assert that transfer_admin, submit_event,
+  and add_indexer all panic. Previously mock_all_auths() masked every
+  require_auth() call, leaving auth logic completely untested.
+
+  Issue 2 (publish order): Move env.events().publish() in submit_event to
+  run before the persistent storage write. If the publish call ever fails,
+  the transaction rolls back before the EventLog entry is written, keeping
+  on-chain storage and the event stream in sync
+
+
 - Add ParamKind enum and bump event log TTL on write/read ([`e812137`](../../commit/e812137adc06d285ded4c07db9ad6e9d1565f800))
 
 Issue 1: Replace kind: Symbol with kind: ParamKind enum (Address, I128,
@@ -298,6 +311,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`2fd76c7`](../../commit/2fd76c7a0872682e768bb06d0b511a06a1370243))
 
 - Auto-update CHANGELOG.md [skip ci] ([`81b919d`](../../commit/81b919d7152ed35210cd6f6d23056738ddf76cfc))
 
