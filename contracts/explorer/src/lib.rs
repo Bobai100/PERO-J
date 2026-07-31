@@ -26,6 +26,12 @@ pub enum Error {
 
 /// Largest `raw_data` blob accepted by `submit_event`.
 pub const MAX_RAW_DATA_BYTES: u32 = 4096;
+/// Largest `description` string accepted by `submit_event`.
+///
+/// Without this bound, an admin or a compromised (allowlisted) indexer key
+/// could store an arbitrarily large description per event — e.g. a 64 KB
+/// string — inflating the rent every user pays for persistent storage.
+pub const MAX_DESCRIPTION_LEN: u32 = 512;
 /// Largest number of functions accepted in a `ContractMeta`.
 pub const MAX_FUNCTIONS: u32 = 64;
 /// Largest number of parameters accepted per function.
@@ -646,6 +652,40 @@ mod tests {
             &Vec::new(&env), &raw,
         );
         assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    fn test_submit_event_max_description_len_ok() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[6u8; 32]);
+        let bytes = [b'a'; MAX_DESCRIPTION_LEN as usize];
+        let description = String::from_str(&env, core::str::from_utf8(&bytes).unwrap());
+        client.submit_event(
+            &admin, &cid, &symbol_short!("swap"), &1u32,
+            &description,
+            &Vec::new(&env), &Bytes::new(&env),
+        );
+        assert_eq!(client.event_count(), 1u64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_submit_event_oversized_description_panics() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let cid: BytesN<32> = BytesN::from_array(&env, &[7u8; 32]);
+        let bytes = [b'a'; (MAX_DESCRIPTION_LEN + 1) as usize];
+        let description = String::from_str(&env, core::str::from_utf8(&bytes).unwrap());
+        client.submit_event(
+            &admin, &cid, &symbol_short!("swap"), &1u32,
+            &description,
+            &Vec::new(&env), &Bytes::new(&env),
+        );
     }
 
     #[test]
