@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add wasm-opt step to make build ([`29c1f1f`](../../commit/29c1f1f33bd31355110994aad385a8a0a8909858))
+
+Add WASM size optimization using wasm-opt -Oz to the build target in Makefile.
+
+  closes [#20](../../issues/20)
+
+
 - Reorder submit_event publish-before-write and add auth tests ([`cf0a281`](../../commit/cf0a28156f84d8a642d3b6dc9266a67961744188))
 
 Issue 1 (auth tests): Add three tests that call env.set_auths(&[]) to
@@ -311,6 +318,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`3095c76`](../../commit/3095c7652a9942fcbfc23f7a7435495cd275d109))
 
 - Auto-update CHANGELOG.md [skip ci] ([`cd7650f`](../../commit/cd7650fea6c8b2f7645505353458e5c6d0d8cb81))
 
