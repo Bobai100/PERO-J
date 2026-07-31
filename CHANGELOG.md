@@ -8,6 +8,50 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add wasm-opt step to make build ([`29c1f1f`](../../commit/29c1f1f33bd31355110994aad385a8a0a8909858))
+
+Add WASM size optimization using wasm-opt -Oz to the build target in Makefile.
+
+  closes [#20](../../issues/20)
+
+
+- Reorder submit_event publish-before-write and add auth tests ([`cf0a281`](../../commit/cf0a28156f84d8a642d3b6dc9266a67961744188))
+
+Issue 1 (auth tests): Add three tests that call env.set_auths(&[]) to
+  strip all authorisations and assert that transfer_admin, submit_event,
+  and add_indexer all panic. Previously mock_all_auths() masked every
+  require_auth() call, leaving auth logic completely untested.
+
+  Issue 2 (publish order): Move env.events().publish() in submit_event to
+  run before the persistent storage write. If the publish call ever fails,
+  the transaction rolls back before the EventLog entry is written, keeping
+  on-chain storage and the event stream in sync
+
+
+- Add ParamKind enum and bump event log TTL on write/read ([`e812137`](../../commit/e812137adc06d285ded4c07db9ad6e9d1565f800))
+
+Issue 1: Replace kind: Symbol with kind: ParamKind enum (Address, I128,
+  U32, Symbol, Bytes, Bool, String) in ParamDef. Unknown ABI param kinds
+  are now rejected at XDR deserialization before reaching contract logic.
+  Add validate_meta and event_seq helpers (were referenced but undefined).
+  Add missing Error::NotInitialized variant (referenced in get_admin).
+
+  Issue 2: Call env.storage().persistent().extend_ttl() on EventLog entries
+  in both submit_event (write) and get_event (read) using EVENT_TTL_MIN
+  (30 days) and EVENT_TTL_MAX (365 days) to prevent silent eviction
+
+
+- Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`5865047`](../../commit/5865047d0c3b4088db2b72dd3e882696311c6242))
+
+- Pin soroban-sdk to =21.7.7 in contracts/explorer/Cargo.toml
+  - Update workspace Cargo.toml to match
+  - Regenerate Cargo.lock to resolve ed25519-dalek compatibility
+  - Use #[contracterror] for Error enum (required by soroban-sdk v21.7.7)
+  - Remove unused imports Map and log
+
+  Closes [#19](../../issues/19)
+
+
 - Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`3e1e59d`](../../commit/3e1e59d5dc06771e0820eabce39f03bdc08921b8))
 
 - Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
@@ -275,6 +319,18 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`3095c76`](../../commit/3095c7652a9942fcbfc23f7a7435495cd275d109))
+
+- Auto-update CHANGELOG.md [skip ci] ([`cd7650f`](../../commit/cd7650fea6c8b2f7645505353458e5c6d0d8cb81))
+
+- Auto-update CHANGELOG.md [skip ci] ([`9cf9faa`](../../commit/9cf9faaa97fec34e7f532a865068f790452202d4))
+
+- Auto-update CHANGELOG.md [skip ci] ([`2fd76c7`](../../commit/2fd76c7a0872682e768bb06d0b511a06a1370243))
+
+- Auto-update CHANGELOG.md [skip ci] ([`81b919d`](../../commit/81b919d7152ed35210cd6f6d23056738ddf76cfc))
+
+- Auto-update CHANGELOG.md [skip ci] ([`261d5f6`](../../commit/261d5f6281a52cb711dcdc549d6e8084a2b18ea7))
+
 - Auto-update CHANGELOG.md [skip ci] ([`033f7a3`](../../commit/033f7a32e9fa2c8ac9d72684d344e08a1c1f964b))
 
 - Auto-update CHANGELOG.md [skip ci] ([`914c72f`](../../commit/914c72ffe79395ea47f8fd2965ea1900e9c1f510))
@@ -359,6 +415,16 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Expose list of all registered contract IDs ([`86853e7`](../../commit/86853e7234fed2f523b18b6435f9f021f320660d))
+
+- Add DataKey::ContractList to store Vec<BytesN<32>> of registered contracts
+  - Append contract ID to list on every register_contract call
+  - Add get_contracts() function to return all registered IDs
+  - Add test_get_contracts_lists_registered_ids test
+
+  Closes [#18](../../issues/18)
+
 
 - Add end-to-end tests verifying full pipeline (contract → indexer → API → frontend) ([`b774907`](../../commit/b774907e44bc12dfc98166ccb479dac83c91db7a))
 

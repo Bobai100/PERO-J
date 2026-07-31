@@ -5,16 +5,19 @@ use soroban_sdk::{
     panic_with_error,
 };
 
+soroban_sdk::contractmeta!(key = "name", val = "PERO-J");
+soroban_sdk::contractmeta!(key = "version", val = "0.1.0");
+
 // ── Error codes ──────────────────────────────────────────────────────────────
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
-    NotFound       = 1,
-    Unauthorized   = 2,
-    AlreadyExists  = 3,
-    LimitExceeded  = 4,
-    InvalidInput   = 5,
+    NotFound          = 1,
+    Unauthorized      = 2,
+    AlreadyExists     = 3,
+    LimitExceeded     = 4,
+    NotInitialized    = 5,
 }
 
 // ── Input limits ─────────────────────────────────────────────────────────────
@@ -38,8 +41,9 @@ pub const MAX_PARAMS: u32 = 32;
 #[contracttype]
 pub enum DataKey {
     Admin,
-    Contract(BytesN<32>),   // contract_id → ContractMeta
-    EventLog(u64),          // seq → DecodedEvent
+    Contract(BytesN<32>),       // contract_id → ContractMeta
+    ContractList,               // Vec<BytesN<32>> of all registered IDs
+    EventLog(u64),              // seq → DecodedEvent
     EventSeq,
     IndexerAllowlist,       // → Vec<Address> of trusted event submitters
 }
@@ -81,12 +85,29 @@ pub struct FunctionAbi {
     pub params:      Vec<ParamDef>,
 }
 
+/// Enumeration of all valid ABI parameter types.
+///
+/// Replacing the free-form `Symbol` prevents callers from registering
+/// contracts with unknown kinds (e.g. `"foobar"`) that would later cause
+/// silent decoding failures in the indexer.
+#[contracttype]
+#[derive(Clone, PartialEq)]
+pub enum ParamKind {
+    Address,
+    I128,
+    U32,
+    Symbol,
+    Bytes,
+    Bool,
+    String,
+}
+
 /// One parameter definition.
 #[contracttype]
 #[derive(Clone)]
 pub struct ParamDef {
-    pub name:     Symbol,
-    pub kind:     Symbol,   // "address" | "i128" | "symbol" | "bytes"
+    pub name: Symbol,
+    pub kind: ParamKind,
 }
 
 /// A decoded, human-readable event stored on-chain.
@@ -107,6 +128,11 @@ pub struct DecodedEvent {
 const EVENTSEQ_TTL_THRESHOLD: u32 = 17_280;
 /// Target TTL after extension (~30 days at 5 s/ledger).
 const EVENTSEQ_TTL_BUMP: u32 = 518_400;
+
+/// Minimum TTL for event log entries before we extend (~30 days).
+const EVENT_TTL_MIN: u32 = 30 * DAY_IN_LEDGERS;
+/// Target TTL for event log entries after extension (~365 days).
+const EVENT_TTL_MAX: u32 = 365 * DAY_IN_LEDGERS;
 
 // ── Contract ──────────────────────────────────────────────────────────────────
 #[contract]
@@ -140,6 +166,34 @@ impl ExplorerContract {
         }
     }
 
+    /// Validate that a `ContractMeta` payload is within the accepted size limits.
+    ///
+    /// Panics with `LimitExceeded` if the number of functions or the number of
+    /// parameters on any single function exceeds the compile-time caps.  Called
+    /// from both `register_contract` and `update_contract` so the check is not
+    /// duplicated.
+    fn validate_meta(env: &Env, meta: &ContractMeta) {
+        if meta.functions.len() > MAX_FUNCTIONS {
+            panic_with_error!(env, Error::LimitExceeded);
+        }
+        for i in 0..meta.functions.len() {
+            if meta.functions.get(i).unwrap().params.len() > MAX_PARAMS {
+                panic_with_error!(env, Error::LimitExceeded);
+            }
+        }
+    }
+
+    /// Read the next event sequence number from instance storage.
+    ///
+    /// Panics with `NotInitialized` if the counter is missing, which means
+    /// `init` has not been called yet.
+    fn event_seq(env: &Env) -> u64 {
+        env.storage()
+            .instance()
+            .get(&DataKey::EventSeq)
+            .unwrap_or_else(|| panic_with_error!(env, Error::NotInitialized))
+    }
+
     /// Panic unless `caller` is the admin or sits on the indexer allowlist.
     fn require_submitter(env: &Env, caller: &Address) {
         if *caller == Self::admin(env) {
@@ -152,6 +206,33 @@ impl ExplorerContract {
             .unwrap_or_else(|| Vec::new(env));
         if !allowlist.contains(caller) {
             panic_with_error!(env, Error::Unauthorized);
+        }
+    }
+
+    /// Read the current event sequence counter from instance storage.
+    fn event_seq(env: &Env) -> u64 {
+        env.storage()
+            .instance()
+            .get(&DataKey::EventSeq)
+            .unwrap_or_else(|| panic_with_error!(env, Error::NotFound))
+    }
+
+    /// Validate `ContractMeta` field limits.
+    ///
+    /// Rejects ABI registrations that exceed the on-chain size caps so that
+    /// a single call cannot bloat storage without limit.  Also enforces that
+    /// every `ParamDef.kind` is a known `ParamKind` variant — the enum type
+    /// already guarantees this at the XDR layer, so this is a belt-and-
+    /// suspenders check that documents the invariant explicitly.
+    fn validate_meta(env: &Env, meta: &ContractMeta) {
+        if meta.functions.len() > MAX_FUNCTIONS {
+            panic_with_error!(env, Error::LimitExceeded);
+        }
+        for i in 0..meta.functions.len() {
+            let f = meta.functions.get(i).unwrap();
+            if f.params.len() > MAX_PARAMS {
+                panic_with_error!(env, Error::LimitExceeded);
+            }
         }
     }
 }
@@ -178,7 +259,8 @@ impl ExplorerContract {
 
     /// Return the current admin address.
     pub fn get_admin(env: Env) -> Address {
-        env.storage().instance()
+        env.storage()
+            .persistent()
             .get(&DataKey::Admin)
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized))
     }
@@ -340,6 +422,13 @@ impl ExplorerContract {
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound))
     }
 
+    /// Return all registered contract IDs.
+    pub fn get_contracts(env: Env) -> Vec<BytesN<32>> {
+        env.storage().persistent()
+            .get(&DataKey::ContractList)
+            .unwrap_or(Vec::new(&env))
+    }
+
     // ── Event Decoder ─────────────────────────────────────────────────────────
 
     /// Submit a decoded event (called by the off-chain indexer via a trusted tx).
@@ -358,8 +447,9 @@ impl ExplorerContract {
         // Only the admin or an allowlisted indexer may submit events.
         Self::require_submitter(&env, &caller);
 
-        if description.len() > MAX_DESCRIPTION_LEN {
-            panic_with_error!(&env, Error::InvalidInput);
+        // Guard against large blobs bloating on-chain storage.
+        if raw_data.len() > MAX_RAW_DATA_BYTES {
+            panic_with_error!(&env, Error::LimitExceeded);
         }
 
         let seq: u64 = Self::event_seq(&env);
@@ -373,6 +463,7 @@ impl ExplorerContract {
             raw_data,
         };
         env.storage().persistent().set(&DataKey::EventLog(seq), &event);
+        env.storage().persistent().extend_ttl(&DataKey::EventLog(seq), EVENT_TTL_MIN, EVENT_TTL_MAX);
         env.storage().instance().set(&DataKey::EventSeq, &(seq + 1));
         Self::bump_ttl(&env);
 
@@ -384,9 +475,12 @@ impl ExplorerContract {
 
     /// Fetch a single decoded event by sequence number.
     pub fn get_event(env: Env, seq: u64) -> DecodedEvent {
-        env.storage().persistent()
-            .get(&DataKey::EventLog(seq))
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound))
+        let key = DataKey::EventLog(seq);
+        let event: DecodedEvent = env.storage().persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound));
+        env.storage().persistent().extend_ttl(&key, EVENT_TTL_MIN, EVENT_TTL_MAX);
+        event
     }
 
     /// Return the total number of stored events.
@@ -426,17 +520,25 @@ mod tests {
         Env, IntoVal, TryFromVal,
     };
 
-    fn setup() -> (Env, ExplorerContractClient<'static>) {
-        let env = Env::default();
-        env.mock_all_auths();
-        let id = env.register_contract(None, ExplorerContract);
-        let client = ExplorerContractClient::new(&env, &id);
-        (env, client)
+    /// Expand into a `(Env, ExplorerContractClient<'_>)` binding in the caller's
+    /// scope.  Using a macro rather than a function sidesteps the
+    /// self-referential lifetime problem: `ExplorerContractClient<'env>` borrows
+    /// from `env`, so both values must live in the *same* scope.  A function
+    /// cannot express that relationship in its return type without resorting to
+    /// the unsound `'static` annotation that issue #23 targets.
+    macro_rules! setup {
+        () => {{
+            let env = Env::default();
+            env.mock_all_auths();
+            let id = env.register_contract(None, ExplorerContract);
+            let client = ExplorerContractClient::new(&env, &id);
+            (env, client)
+        }};
     }
 
     #[test]
     fn test_init_and_register() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -454,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_submit_and_get_event() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -477,7 +579,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_double_init_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
         client.init(&admin); // should panic
@@ -485,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_transfer_admin() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin     = Address::generate(&env);
         let new_admin = Address::generate(&env);
         client.init(&admin);
@@ -509,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_get_admin() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin     = Address::generate(&env);
         let new_admin = Address::generate(&env);
         client.init(&admin);
@@ -522,20 +624,20 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_get_admin_uninitialised_panics() {
-        let (_env, client) = setup();
+        let (_env, client) = setup!();
         client.get_admin();
     }
 
     #[test]
     #[should_panic]
     fn test_event_count_uninitialised_panics() {
-        let (_env, client) = setup();
+        let (_env, client) = setup!();
         client.event_count();
     }
 
     #[test]
     fn test_submit_event_max_raw_data_ok() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -589,7 +691,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_submit_event_oversized_raw_data_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -613,7 +715,7 @@ mod tests {
             for _ in 0..params {
                 p.push_back(ParamDef {
                     name: symbol_short!("amount"),
-                    kind: symbol_short!("i128"),
+                    kind: ParamKind::I128,
                 });
             }
             functions.push_back(FunctionAbi {
@@ -632,7 +734,7 @@ mod tests {
 
     #[test]
     fn test_register_contract_at_abi_limits_ok() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -645,7 +747,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_register_contract_too_many_functions_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -657,7 +759,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_register_contract_too_many_params_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -669,7 +771,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_update_contract_too_many_functions_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -681,7 +783,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_transfer_admin_wrong_caller_panics() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin    = Address::generate(&env);
         let attacker = Address::generate(&env);
         client.init(&admin);
@@ -720,7 +822,7 @@ mod tests {
     /// contract never lets its state lapse in the first place.
     #[test]
     fn test_mutating_calls_bump_ttl() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 
@@ -747,7 +849,7 @@ mod tests {
 
     #[test]
     fn test_allowlisted_indexer_can_submit() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin   = Address::generate(&env);
         let indexer = Address::generate(&env);
         client.init(&admin);
@@ -772,7 +874,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_removed_indexer_cannot_submit() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin   = Address::generate(&env);
         let indexer = Address::generate(&env);
         client.init(&admin);
@@ -795,7 +897,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_non_admin_cannot_add_indexer() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin    = Address::generate(&env);
         let attacker = Address::generate(&env);
         client.init(&admin);
@@ -807,7 +909,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_get_events_rejects_oversized_limit() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
         client.get_events(&0u64, &u32::MAX);
@@ -815,7 +917,7 @@ mod tests {
 
     #[test]
     fn test_get_events_accepts_max_page() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
         assert_eq!(client.get_events(&0u64, &MAX_PAGE).len(), 0);
@@ -825,7 +927,7 @@ mod tests {
 
     #[test]
     fn test_update_contract_emits_event() {
-        let (env, client) = setup();
+        let (env, client) = setup!();
         let admin = Address::generate(&env);
         client.init(&admin);
 

@@ -7,6 +7,8 @@ export EXPLORER_CONTRACT_ID
 build:
 	cargo build --release --target wasm32-unknown-unknown \
 	  -p soroban-explorer-contract
+	wasm-opt -Oz target/wasm32-unknown-unknown/release/soroban_explorer_contract.wasm \
+	  -o target/wasm32-unknown-unknown/release/soroban_explorer_contract.optimized.wasm
 
 test:
 	cargo test -p soroban-explorer-contract
