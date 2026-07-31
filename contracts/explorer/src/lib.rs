@@ -5,6 +5,9 @@ use soroban_sdk::{
     panic_with_error,
 };
 
+soroban_sdk::contractmeta!(key = "name", val = "PERO-J");
+soroban_sdk::contractmeta!(key = "version", val = "0.1.0");
+
 // ── Error codes ──────────────────────────────────────────────────────────────
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
