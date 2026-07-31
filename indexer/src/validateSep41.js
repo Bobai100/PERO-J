@@ -23,7 +23,7 @@ import {
 
 const RPC_URL = process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE = process.env.NETWORK_PASSPHRASE || Networks.TESTNET;
-const DUMMY_SOURCE = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+const DUMMY_SOURCE = "GCFIRY65OQE7DFP5KLNS2PF2LVZMUZYJX4OZIEQ36N2IQANUB5XVYOJR";
 const MAX_CONCURRENT_CHECKS = 3;
 const MAX_RATE_LIMIT_RETRIES = 3;
 const RATE_LIMIT_RETRY_BASE_MS = 250;
@@ -54,7 +54,6 @@ const SEP41_FUNCTIONS = [
 const EXECUTION_ERROR_PATTERNS = [
   /wasm trap/i,
   /contract error/i,
-  /invalid/i,
   /unauthorized/i,
   /insufficient/i,
   /overflow/i,
@@ -118,6 +117,10 @@ async function functionExists(contract, fnName, args) {
   if (!SorobanRpc.Api.isSimulationError(result)) {
     return true;
   } // success → exists
+
+  if (isMissingFunctionError(result.error)) {
+    return false;
+  }
 
   // If the error looks like a runtime/logic error the function is present
   if (isExecutionError(result.error)) {
