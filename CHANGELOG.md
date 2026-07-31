@@ -8,6 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Add ParamKind enum and bump event log TTL on write/read ([`e812137`](../../commit/e812137adc06d285ded4c07db9ad6e9d1565f800))
+
+Issue 1: Replace kind: Symbol with kind: ParamKind enum (Address, I128,
+  U32, Symbol, Bytes, Bool, String) in ParamDef. Unknown ABI param kinds
+  are now rejected at XDR deserialization before reaching contract logic.
+  Add validate_meta and event_seq helpers (were referenced but undefined).
+  Add missing Error::NotInitialized variant (referenced in get_admin).
+
+  Issue 2: Call env.storage().persistent().extend_ttl() on EventLog entries
+  in both submit_event (write) and get_event (read) using EVENT_TTL_MIN
+  (30 days) and EVENT_TTL_MAX (365 days) to prevent silent eviction
+
+
 - Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`3e1e59d`](../../commit/3e1e59d5dc06771e0820eabce39f03bdc08921b8))
 
 - Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
@@ -285,6 +298,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`81b919d`](../../commit/81b919d7152ed35210cd6f6d23056738ddf76cfc))
 
 - Auto-update CHANGELOG.md [skip ci] ([`261d5f6`](../../commit/261d5f6281a52cb711dcdc549d6e8084a2b18ea7))
 
