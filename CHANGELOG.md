@@ -52,6 +52,15 @@ Issue 1: Replace kind: Symbol with kind: ParamKind enum (Address, I128,
   Closes [#19](../../issues/19)
 
 
+- Bound description length in submit_event ([`1a9f566`](../../commit/1a9f5668d79eb5695af7ef6ccf6106e997d5db15))
+
+An admin or a compromised allowlisted indexer key could submit an
+  arbitrarily large description string (e.g. 64 KB) per event, inflating
+  the persistent-storage rent every user pays. Cap it at
+  MAX_DESCRIPTION_LEN (512 bytes) and panic with Error::InvalidInput when
+  exceeded, mirroring the existing raw_data size guard
+
+
 - Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`3e1e59d`](../../commit/3e1e59d5dc06771e0820eabce39f03bdc08921b8))
 
 - Harden init, add indexer allowlist, cap paging, emit update event ([`8bbe4cc`](../../commit/8bbe4cc83c34cbd85d4b04bb86e8547fcf38b3e5))
@@ -318,6 +327,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`b86cfe1`](../../commit/b86cfe10fd81adbe717a988f74b3e8febdc19f2e))
 
 - Auto-update CHANGELOG.md [skip ci] ([`3095c76`](../../commit/3095c7652a9942fcbfc23f7a7435495cd275d109))
 
