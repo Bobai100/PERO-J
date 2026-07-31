@@ -31,8 +31,9 @@ pub const MAX_PARAMS: u32 = 32;
 #[contracttype]
 pub enum DataKey {
     Admin,
-    Contract(BytesN<32>),   // contract_id → ContractMeta
-    EventLog(u64),          // seq → DecodedEvent
+    Contract(BytesN<32>),       // contract_id → ContractMeta
+    ContractList,               // Vec<BytesN<32>> of all registered IDs
+    EventLog(u64),              // seq → DecodedEvent
     EventSeq,
     IndexerAllowlist,       // → Vec<Address> of trusted event submitters
 }
@@ -331,6 +332,13 @@ impl ExplorerContract {
         env.storage().persistent()
             .get(&DataKey::Contract(contract_id))
             .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound))
+    }
+
+    /// Return all registered contract IDs.
+    pub fn get_contracts(env: Env) -> Vec<BytesN<32>> {
+        env.storage().persistent()
+            .get(&DataKey::ContractList)
+            .unwrap_or(Vec::new(&env))
     }
 
     // ── Event Decoder ─────────────────────────────────────────────────────────
