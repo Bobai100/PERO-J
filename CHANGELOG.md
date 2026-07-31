@@ -162,6 +162,17 @@ Instance storage has a short TTL; if it expires, EventSeq would fall back
   Closes [#17](../../issues/17)
 
 
+- Pin soroban-sdk to exact version 21.7.7 for reproducible builds ([`5865047`](../../commit/5865047d0c3b4088db2b72dd3e882696311c6242))
+
+- Pin soroban-sdk to =21.7.7 in contracts/explorer/Cargo.toml
+  - Update workspace Cargo.toml to match
+  - Regenerate Cargo.lock to resolve ed25519-dalek compatibility
+  - Use #[contracterror] for Error enum (required by soroban-sdk v21.7.7)
+  - Remove unused imports Map and log
+
+  Closes [#19](../../issues/19)
+
+
 - Improve rpc and database resilience ([`76f1d37`](../../commit/76f1d37ba0c5947589f722cc5eabcfee315b66bc))
 
 - Resolve assigned event API and DB issues ([`5d6f68d`](../../commit/5d6f68d79689f2efd244dc8e76531ff9c7cb9bf3))
@@ -274,6 +285,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`261d5f6`](../../commit/261d5f6281a52cb711dcdc549d6e8084a2b18ea7))
 
 - Auto-update CHANGELOG.md [skip ci] ([`033f7a3`](../../commit/033f7a32e9fa2c8ac9d72684d344e08a1c1f964b))
 
@@ -396,6 +409,16 @@ Add automated PostgreSQL backup via scripts/backup.sh using pg_dump
   procedure, and cloud deployment backup options (RDS, Cloud SQL).
 
   Closes [#106](../../issues/106)
+
+
+- Expose list of all registered contract IDs ([`86853e7`](../../commit/86853e7234fed2f523b18b6435f9f021f320660d))
+
+- Add DataKey::ContractList to store Vec<BytesN<32>> of registered contracts
+  - Append contract ID to list on every register_contract call
+  - Add get_contracts() function to return all registered IDs
+  - Add test_get_contracts_lists_registered_ids test
+
+  Closes [#18](../../issues/18)
 
 
 - Add CI pipeline, Docker Compose infrastructure, and frontend containerization ([`99a233a`](../../commit/99a233a5e5a70cf17f53f05e8a956393bf6b048c))
