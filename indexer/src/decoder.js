@@ -116,6 +116,10 @@ function buildDescription(fn, args, data, contractName) {
       const [from, amount, token] = args;
       return `${amount} ${token ?? ""} burned from ${fmt(from)} on ${contractName}`;
     }
+    case "transfer_from": {
+      const [owner, spender, to, amount, token] = args;
+      return `Address ${fmt(owner)} (via ${fmt(spender)}) transferred ${amount} ${token ?? ""} to ${fmt(to)} on ${contractName}`;
+    }
     default:
       return genericDescription(fn, args, data, contractName);
   }
