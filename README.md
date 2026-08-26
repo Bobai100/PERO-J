@@ -132,6 +132,7 @@ The `update` topic lets the indexer invalidate its ABI cache without polling sto
 | `GET /api/events/:seq` | Single event |
 | `GET /api/contracts/:id` | Contract ABI metadata |
 | `POST /api/contracts` | Register contract metadata |
+| `DELETE /api/contracts/:id` | Remove contract ABI metadata (requires `Authorization: Bearer <API_ADMIN_KEY>`) |
 | `GET /api/wallet/:address` | Wallet event history |
 | `GET /api/tokens/:id/volume?decimals=` | 24-hour rolling transfer volume for a SEP-41 token. Optional `decimals` query param (integer 0–38) overrides the on-chain metadata lookup. |
 
