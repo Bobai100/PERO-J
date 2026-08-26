@@ -4,6 +4,7 @@ import { startApi } from "./api.js";
 import { db } from "./db.js";
 import { decode } from "./decoder.js";
 import { reloadSacMap } from "./sac.js";
+import { validateNetwork } from "./validateNetwork.js";
 
 dotenv.config();
 
@@ -72,6 +73,8 @@ process.on("SIGHUP", () => {
 async function run() {
   await db.init();
   startApi();
+
+  await validateNetwork(rpc);
 
   const persisted = await db.getCursor();
   let cursor = persisted ?? (START_LEDGER || (await rpc.getLatestLedger()).sequence - 100);
