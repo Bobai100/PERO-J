@@ -255,6 +255,26 @@ describe("db.getWalletEvents()", () => {
   });
 });
 
+describe("db.getLeaderboard()", () => {
+  beforeEach(() => resetMock());
+
+  it("returns top contracts with name and event_count", async () => {
+    _nextRow = { contract_id: "C1", name: "Swap", event_count: 5 };
+    const result = await db.getLeaderboard();
+    assert.ok(Array.isArray(result));
+    assert.equal(result[0].contract_id, "C1");
+    assert.equal(result[0].name, "Swap");
+    assert.equal(result[0].event_count, 5);
+  });
+
+  it("caps limit at 50", async () => {
+    await db.getLeaderboard(100);
+    const { sql, params } = lastCall();
+    assert.ok(sql.includes("LIMIT"));
+    assert.equal(params[params.length - 1], 50);
+  });
+});
+
 describe("db.get24hVolume()", () => {
   beforeEach(() => resetMock());
 

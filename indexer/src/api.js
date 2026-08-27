@@ -90,6 +90,17 @@ export function startApi() {
     })
   );
 
+  // GET /api/leaderboard?limit=10 — top contracts by event volume
+  app.get(
+    "/api/leaderboard",
+    asyncHandler(async (req, res) => {
+      const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+      const result = await db.getLeaderboard(limit);
+      res.setHeader("Cache-Control", "public, max-age=60");
+      res.json(result);
+    })
+  );
+
   // GET /api/events?contract=&fn=&page=&q=
   app.get(
     "/api/events",

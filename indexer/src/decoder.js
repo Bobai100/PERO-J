@@ -125,6 +125,13 @@ function buildDescription(fn, args, data, contractName) {
 const VALID_STRKEY_RE = /^G[A-Z0-9]{55}$/;
 
 /**
+ * Maximum length for non-address string arguments displayed in generic event
+ * descriptions.  Values longer than this are truncated to "first32…last16".
+ * Valid 56-char Stellar strkeys bypass this limit.
+ */
+const MAX_ARG_DISPLAY_LEN = 128;
+
+/**
  * Return true when a stringified argument value looks sensitive and should be
  * redacted from the public description.  Matches:
  *  - 56-character strings starting with G that are NOT valid strkeys — could
@@ -137,11 +144,17 @@ const VALID_STRKEY_RE = /^G[A-Z0-9]{55}$/;
  */
 function isSensitive(s) {
   // 56-char G-prefixed string that is NOT a valid public strkey
-  if (s.length === 56 && s.startsWith("G") && !VALID_STRKEY_RE.test(s)) return true;
+  if (s.length === 56 && s.startsWith("G") && !VALID_STRKEY_RE.test(s)) {
+    return true;
+  }
   // Raw hex data: 64+ contiguous hex characters
-  if (/^[0-9a-fA-F]{64,}$/.test(s)) return true;
+  if (/^[0-9a-fA-F]{64,}$/.test(s)) {
+    return true;
+  }
   // Base64 blob of ≥ 44 chars (covers 32-byte secrets encoded in base64)
-  if (/^[A-Za-z0-9+/]{44,}={0,2}$/.test(s)) return true;
+  if (/^[A-Za-z0-9+/]{44,}={0,2}$/.test(s)) {
+    return true;
+  }
   return false;
 }
 
@@ -149,17 +162,22 @@ function isSensitive(s) {
  * Sanitise a single stringified argument value for safe inclusion in a
  * human-readable description:
  *  1. Redact values that match a known sensitive pattern with "[REDACTED]".
- *  2. Truncate values longer than 64 characters to "first…last" form.
+ *  2. Bypass truncation for valid Stellar strkeys (56 chars, always safe).
+ *  3. Truncate non-address values longer than MAX_ARG_DISPLAY_LEN to
+ *     "first32…last16" form.
  *
  * @param {unknown} val - Raw decoded argument value.
  * @returns {string}
  */
 function sanitiseArg(val) {
   const s = String(val);
+  if (VALID_STRKEY_RE.test(s)) {
+    return s;
+  }
   if (isSensitive(s)) {
     return "[REDACTED]";
   }
-  if (s.length > 64) {
+  if (s.length > MAX_ARG_DISPLAY_LEN) {
     return `${s.slice(0, 32)}…${s.slice(-16)}`;
   }
   return s;
