@@ -338,6 +338,10 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Add snapshot update instructions ([`7f6186a`](../../commit/7f6186a78c6a01dd0e38b92dbce373676225c497))
+
+- Auto-update CHANGELOG.md [skip ci] ([`7f30f84`](../../commit/7f30f845bcce546a73488e15f378a497ee61c3d5))
+
 - Auto-update CHANGELOG.md [skip ci] ([`98b9608`](../../commit/98b9608228bb49d4a2ab8bbefeda8ea1139c0da0))
 
 - Auto-update CHANGELOG.md [skip ci] ([`b86cfe1`](../../commit/b86cfe10fd81adbe717a988f74b3e8febdc19f2e))
