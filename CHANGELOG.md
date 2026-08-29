@@ -338,6 +338,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`c6c7c64`](../../commit/c6c7c64688bc20d8b0af135b7acc36e4457b79c7))
+
 - Add emergency recovery section about permanent key loss ([`1d8f802`](../../commit/1d8f802104267b308e5ab6bf4842894e4496403e))
 
 - Auto-update CHANGELOG.md [skip ci] ([`3651fd6`](../../commit/3651fd660a28416bb42b776a4052bff601c2b049))
@@ -448,6 +450,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add transfer_from case to buildDescription ([`dd4d9dd`](../../commit/dd4d9ddc6567d86df7956fd9fa05d3b204dbb174))
 
 - Add make db target for PostgreSQL container ([`c91e6ee`](../../commit/c91e6ee080d6e4a467917e53cf0b778640500ec2))
 
