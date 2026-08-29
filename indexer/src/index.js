@@ -107,4 +107,6 @@ async function run() {
   process.exit(0);
 }
 
-run();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  run();
+}

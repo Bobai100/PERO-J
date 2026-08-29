@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Nav from "./components/Nav";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import ContractPage from "./pages/ContractPage";
 import WalletPage from "./pages/WalletPage";
@@ -12,7 +13,9 @@ export default function App() {
     <>
       <Nav />
       <ErrorBoundary>
-        <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}>
+        <main
+          style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}
+        >
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/contract/:id" element={<ContractPage />} />
@@ -21,6 +24,7 @@ export default function App() {
           </Routes>
         </main>
       </ErrorBoundary>
+      <Footer />
     </>
   );
 }

@@ -310,13 +310,22 @@ export const db = {
   },
 
   /**
+   * Delete ABI metadata for a contract by id.
+   *
+   * @param {string} id - Strkey-encoded contract address (C…)
+   * @returns {Promise<number>} The number of rows deleted (0 if not found).
+   */
+  async deleteContractMeta(id) {
+    const { rowCount } = await pool.query("DELETE FROM contracts WHERE id = $1", [id]);
+    return rowCount;
+  },
+
+  /**
    * Fetch distinct function names from the events table.
    * @returns {Promise<string[]>}
    */
   async getDistinctFunctions() {
-    const { rows } = await pool.query(
-      "SELECT DISTINCT function FROM events ORDER BY function"
-    );
+    const { rows } = await pool.query("SELECT DISTINCT function FROM events ORDER BY function");
     return rows.map((r) => r.function);
   },
 
@@ -326,7 +335,17 @@ export const db = {
    */
   async getCursor() {
     const { rows } = await pool.query("SELECT value FROM indexer_state WHERE key = 'last_ledger'");
-    return rows.length ? Number(rows[0].value) : null;
+    if (!rows.length) {
+      return null;
+    }
+    const cursor = parseInt(rows[0].value, 10);
+    if (Number.isNaN(cursor)) {
+      console.warn(
+        `Invalid cursor value found in indexer_state: ${rows[0].value} — resetting to null`
+      );
+      return null;
+    }
+    return cursor;
   },
 
   /**
