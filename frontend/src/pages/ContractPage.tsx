@@ -22,6 +22,7 @@ export default function ContractPage() {
     enabled: !!id && !!meta,
   });
   const events = eventsData?.events ?? [];
+  const [confirmUpdate, setConfirmUpdate] = useState(false);
 
   const registerMutation = useMutation({
     mutationFn: api.registerContract,
@@ -82,22 +83,43 @@ export default function ContractPage() {
           </div>
         )}
 
-        {/* Re-register button: triggers cache invalidation so updated metadata
+        {/* Update metadata button: triggers cache invalidation so updated metadata
             is reflected immediately rather than waiting for staleTime to expire. */}
-        <button
-          style={{ marginTop: 16 }}
-          disabled={registerMutation.isPending}
-          onClick={() => registerMutation.mutate(meta)}
-        >
-          {registerMutation.isPending ? "Saving…" : "Update registration"}
-        </button>
+        {!confirmUpdate ? (
+          <button
+            style={{ marginTop: 16 }}
+            disabled={registerMutation.isPending}
+            onClick={() => setConfirmUpdate(true)}
+          >
+            {registerMutation.isPending ? "Saving…" : "Update metadata"}
+          </button>
+        ) : (
+          <div style={{ marginTop: 16, display: "flex", gap: 8, alignItems: "center" }}>
+            <span>Update contract metadata?</span>
+            <button
+              disabled={registerMutation.isPending}
+              onClick={() => {
+                registerMutation.mutate(meta);
+                setConfirmUpdate(false);
+              }}
+            >
+              {registerMutation.isPending ? "Saving…" : "Confirm"}
+            </button>
+            <button
+              disabled={registerMutation.isPending}
+              onClick={() => setConfirmUpdate(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         {registerMutation.isError && (
           <p style={{ color: "red", marginTop: 8 }}>
             {(registerMutation.error as Error).message}
           </p>
         )}
         {registerMutation.isSuccess && (
-          <p style={{ color: "green", marginTop: 8 }}>Registration updated.</p>
+          <p style={{ color: "green", marginTop: 8 }}>Metadata updated.</p>
         )}
       </div>
 
