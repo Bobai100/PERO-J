@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Recreate RPC client after 3 consecutive errors ([`aa37cb7`](../../commit/aa37cb7c1518a19fc9b7aa5dd02cdeea1e86f0fe))
+
+Add error counting to the indexer main loop. After 3 consecutive RPC
+  failures (threshold: RPC_ERROR_THRESHOLD), the SorobanRpc.Server instance
+  is recreated to recover from potentially corrupted internal state. The
+  error counter resets on both success and recreation.
+
+  Closes [#421](../../issues/421)
+
+
 - Add wasm-opt step to make build ([`29c1f1f`](../../commit/29c1f1f33bd31355110994aad385a8a0a8909858))
 
 Add WASM size optimization using wasm-opt -Oz to the build target in Makefile.
@@ -327,6 +337,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`98b9608`](../../commit/98b9608228bb49d4a2ab8bbefeda8ea1139c0da0))
 
 - Auto-update CHANGELOG.md [skip ci] ([`b86cfe1`](../../commit/b86cfe10fd81adbe717a988f74b3e8febdc19f2e))
 
