@@ -80,6 +80,9 @@ make deploy     # deploy to testnet, prints CONTRACT_ID
 Copy the printed contract ID into `.env` as `EXPLORER_CONTRACT_ID`.
 
 ### 3. Start the indexer + API
+
+The indexer validates `NETWORK_PASSPHRASE` on startup by querying the RPC endpoint. If the configured passphrase does not match the RPC-reported network, the indexer logs an error and exits with code 1. This prevents mainnet/testnet mix-ups.
+
 ```bash
 make indexer-install
 make indexer
