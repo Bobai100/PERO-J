@@ -338,6 +338,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Auto-update CHANGELOG.md [skip ci] ([`806da8f`](../../commit/806da8ff966e0f1d892755508e3d69f1edd2711d))
+
 - Add snapshot update instructions ([`7f6186a`](../../commit/7f6186a78c6a01dd0e38b92dbce373676225c497))
 
 - Auto-update CHANGELOG.md [skip ci] ([`7f30f84`](../../commit/7f30f845bcce546a73488e15f378a497ee61c3d5))
@@ -442,6 +444,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Features
+
+- Add make db target for PostgreSQL container ([`c91e6ee`](../../commit/c91e6ee080d6e4a467917e53cf0b778640500ec2))
 
 - Expose list of all registered contract IDs ([`86853e7`](../../commit/86853e7234fed2f523b18b6435f9f021f320660d))
 
