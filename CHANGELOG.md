@@ -8,6 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve issues 360-363 ([`902bfea`](../../commit/902bfea55fe526fea2f8ea77f9f6d5ddcda2af29))
+
+[#360](../../issues/360): Fix getCursor to use parseInt with NaN guard and warning log for corrupted cursor values
+  [#361](../../issues/361): Add DELETE /api/contracts/:id endpoint with API_ADMIN_KEY auth and db.deleteContractMeta
+  [#362](../../issues/362): Log stack trace with method/path in error handler; export for testing
+  [#363](../../issues/363): Add VITE_COMMIT_SHA/VITE_APP_VERSION footer for version traceability
+
+  Closes [#360](../../issues/360)
+  Closes [#361](../../issues/361)
+  Closes [#362](../../issues/362)
+  Closes [#363](../../issues/363)
+
+
 - Resolve issues [#364](../../issues/364) [#365](../../issues/365) [#366](../../issues/366) [#367](../../issues/367) ([`f08630f`](../../commit/f08630ff089bbe57b8a63bab9f7d884dd732c46c))
 
 - [#364](../../issues/364): Replace hardcoded localhost URLs in e2e tests with env vars
@@ -349,6 +362,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`6f65ea6`](../../commit/6f65ea670192e67b9c9c7566219008543fd8901b))
 
 - Auto-update CHANGELOG.md [skip ci] ([`8b37bbf`](../../commit/8b37bbf1fd37a748ed94303320ae8130dc0262bf))
 
