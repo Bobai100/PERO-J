@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve issues [#368](../../issues/368), [#369](../../issues/369), [#370](../../issues/370), [#371](../../issues/371) ([`5bb3d82`](../../commit/5bb3d8232709de57da619097919841607a53fe28))
+
+- [#368](../../issues/368): sanitiseArg now bypasses truncation for valid strkeys,
+    raises MAX_ARG_DISPLAY_LEN to 128, and checks strkeys before
+    isSensitive to avoid incorrect redaction.
+  - [#369](../../issues/369): add GET /api/leaderboard?limit= endpoint with db.getLeaderboard,
+    Cache-Control max-age=60, and db.test coverage.
+  - [#370](../../issues/370): add init() warning and pool.query threading-model comments.
+  - [#371](../../issues/371): add dark mode toggle to Nav.tsx, persist to localStorage,
+    respect prefers-color-scheme, and add [data-theme="dark"] overrides
+
+
 - Resolve issues 360-363 ([`902bfea`](../../commit/902bfea55fe526fea2f8ea77f9f6d5ddcda2af29))
 
 [#360](../../issues/360): Fix getCursor to use parseInt with NaN guard and warning log for corrupted cursor values
@@ -362,6 +374,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`73a2fc3`](../../commit/73a2fc32d98f0fba1cc9a0561c9f34d58474edf8))
 
 - Auto-update CHANGELOG.md [skip ci] ([`6f65ea6`](../../commit/6f65ea670192e67b9c9c7566219008543fd8901b))
 
