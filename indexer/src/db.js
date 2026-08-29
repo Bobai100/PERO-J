@@ -83,6 +83,12 @@ process.on("unhandledRejection", async (err) => {
 
 export const db = {
   /** Run advisory-locked schema migrations before startup.
+   *
+   * IMPORTANT: This method acquires a dedicated client from the pool.
+   * Do NOT call any other db.* method from inside a migration, because those
+   * methods use pool.query directly. Drawing from the pool while a client is
+   * already checked out risks deadlock under concurrent load.
+   *
    * @returns {Promise<void>}
    */
   async init() {
@@ -123,6 +129,7 @@ export const db = {
 
   /**
    * Check if database is reachable.
+   * Uses pool.query — safe to call outside of init().
    * @returns {Promise<boolean>}
    */
   async ping() {
@@ -146,6 +153,7 @@ export const db = {
    * Persist a decoded event to the database.
    * Uses ON CONFLICT DO NOTHING so duplicate events (e.g. from an indexer
    * restart) are silently skipped.
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {DecodedEvent} ev
    * @returns {Promise<void>}
@@ -171,6 +179,7 @@ export const db = {
 
   /**
    * Return a paginated list of events, optionally filtered by contract and/or function.
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {object}  [opts]
    * @param {string}  [opts.contract]  - Filter by contract_id (exact match).
@@ -214,6 +223,7 @@ export const db = {
 
   /**
    * Fetch a single event by its auto-increment sequence number.
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {number} seq
    * @returns {Promise<DecodedEvent|null>} The event row, or null if not found.
@@ -226,6 +236,7 @@ export const db = {
   /**
    * Return paginated events where the given address appears in the description
    * or raw_topics (case-insensitive substring match).
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {string} address - Stellar address (Strkey, G… or C…)
    * @param {object} [opts]
@@ -254,6 +265,7 @@ export const db = {
 
   /**
    * Fetch ABI-like metadata for a registered contract.
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {string} id - Strkey-encoded contract address (C…)
    * @returns {Promise<ContractMeta|null>} The contract row, or null if not registered.
@@ -267,6 +279,7 @@ export const db = {
    * Aggregate transfer volume for a contract over the last 24 hours.
    * Amounts are stored as raw strings in raw_data; we cast via NUMERIC to
    * avoid floating-point errors and return a BigInt-safe string.
+   * Uses pool.query — safe to call outside of init().
    * @param {string} contractId
    * @param {number} decimals  token decimal places (default 7)
    * @returns {Promise<VolumeResult>}
@@ -296,6 +309,7 @@ export const db = {
    * Insert or update ABI metadata for a contract.
    * On conflict (same id) updates name, description, functions, and registered_by.
    * created_at is preserved.
+   * Uses pool.query — safe to call outside of init().
    *
    * @param {ContractMeta} meta
    * @returns {Promise<void>}
@@ -322,6 +336,7 @@ export const db = {
 
   /**
    * Fetch distinct function names from the events table.
+   * Uses pool.query — safe to call outside of init().
    * @returns {Promise<string[]>}
    */
   async getDistinctFunctions() {
@@ -330,7 +345,30 @@ export const db = {
   },
 
   /**
+   * Return the top N contracts by event count, joined with the contracts
+   * table to include the contract name.
+   * Uses pool.query — safe to call outside of init().
+   *
+   * @param {number} [limit=10] - Max rows to return (capped at 50).
+   * @returns {Promise<Array<{ contract_id: string, name: string, event_count: number }>>}
+   */
+  async getLeaderboard(limit = 10) {
+    const capped = Math.min(Math.max(Number(limit) || 10, 1), 50);
+    const { rows } = await pool.query(
+      `SELECT e.contract_id, c.name, COUNT(*) AS event_count
+       FROM events e
+       JOIN contracts c ON c.id = e.contract_id
+       GROUP BY e.contract_id, c.name
+       ORDER BY event_count DESC
+       LIMIT $1`,
+      [capped]
+    );
+    return rows;
+  },
+
+  /**
    * Read the persisted indexer cursor from the indexer_state table.
+   * Uses pool.query — safe to call outside of init().
    * @returns {Promise<number|null>} The last successfully indexed ledger, or null.
    */
   async getCursor() {
@@ -351,6 +389,7 @@ export const db = {
   /**
    * Persist the indexer cursor so the process can resume from this ledger
    * after a restart.
+   * Uses pool.query — safe to call outside of init().
    * @param {number} ledger
    * @returns {Promise<void>}
    */
