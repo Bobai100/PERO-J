@@ -338,6 +338,10 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 ### Documentation
 
+- Add emergency recovery section about permanent key loss ([`1d8f802`](../../commit/1d8f802104267b308e5ab6bf4842894e4496403e))
+
+- Auto-update CHANGELOG.md [skip ci] ([`3651fd6`](../../commit/3651fd660a28416bb42b776a4052bff601c2b049))
+
 - Auto-update CHANGELOG.md [skip ci] ([`806da8f`](../../commit/806da8ff966e0f1d892755508e3d69f1edd2711d))
 
 - Add snapshot update instructions ([`7f6186a`](../../commit/7f6186a78c6a01dd0e38b92dbce373676225c497))
