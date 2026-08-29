@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug Fixes
 
+- Resolve issues [#364](../../issues/364) [#365](../../issues/365) [#366](../../issues/366) [#367](../../issues/367) ([`f08630f`](../../commit/f08630ff089bbe57b8a63bab9f7d884dd732c46c))
+
+- [#364](../../issues/364): Replace hardcoded localhost URLs in e2e tests with env vars
+    (INDEXER_URL, FRONTEND_URL) and document in README
+  - [#365](../../issues/365): Add dump file size validation to backup.sh (>512 bytes)
+    and document in docs/backup.md
+  - [#366](../../issues/366): Add NETWORK_PASSPHRASE validation on indexer startup
+    against RPC network, with tests and README documentation
+  - [#367](../../issues/367): Rename button to 'Update metadata', add confirmation
+    dialog, and fix success message in ContractPage.tsx
+
+
 - Recreate RPC client after 3 consecutive errors ([`aa37cb7`](../../commit/aa37cb7c1518a19fc9b7aa5dd02cdeea1e86f0fe))
 
 Add error counting to the indexer main loop. After 3 consecutive RPC
@@ -337,6 +349,8 @@ Issue [#118](../../issues/118) — Contract admin key management
 
 
 ### Documentation
+
+- Auto-update CHANGELOG.md [skip ci] ([`8b37bbf`](../../commit/8b37bbf1fd37a748ed94303320ae8130dc0262bf))
 
 - Auto-update CHANGELOG.md [skip ci] ([`c6c7c64`](../../commit/c6c7c64688bc20d8b0af135b7acc36e4457b79c7))
 
